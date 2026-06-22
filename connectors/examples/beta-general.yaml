@@ -1,0 +1,45 @@
+connector_version: '1.0'
+id: beta-general@phase-a
+display_name: Beta General
+endpoint:
+  type: openai
+  base_url: https://openrouter.ai/api/v1
+  model_name: mock/beta-general
+  auth_env: OPENROUTER_API_KEY
+context_window: 128000
+max_output_tokens: 8192
+modalities:
+- text
+pricing:
+  input_per_1k: 0.08
+  output_per_1k: 0.16
+  currency: USD
+locality: api
+supports:
+  tools: true
+  json_mode: true
+  streaming: true
+  system_prompt: true
+tool_format: openai
+capabilities:
+  reasoning: strong
+  coding: mid
+  long_context: strong
+  instruction_following: strong
+  verification: strong
+  tool_use: mid
+speed:
+  tokens_per_sec: 35.0
+  tier: medium
+profile:
+  probe_suite_version: '2026.1'
+  profiled_at: '2026-06-01T12:00:00Z'
+  probe_scores:
+    reasoning: 0.79
+    coding: 0.58
+    long_context: 0.82
+    instruction_following: 0.8
+    verification: 0.76
+    tool_use: 0.52
+  contributor: mat:phase-a
+  integrity_sha256: 231021698e415d5131d267c85f4215f621311746daa9201c1121588cb2a34d6f

@@ -1,0 +1,45 @@
+connector_version: '1.0'
+id: delta-heldout@phase-a
+display_name: Delta Held-out
+endpoint:
+  type: openai
+  base_url: https://openrouter.ai/api/v1
+  model_name: mock/delta-heldout
+  auth_env: OPENROUTER_API_KEY
+context_window: 128000
+max_output_tokens: 8192
+modalities:
+- text
+pricing:
+  input_per_1k: 0.06
+  output_per_1k: 0.12
+  currency: USD
+locality: api
+supports:
+  tools: true
+  json_mode: true
+  streaming: true
+  system_prompt: true
+tool_format: openai
+capabilities:
+  reasoning: mid
+  coding: frontier
+  long_context: mid
+  instruction_following: mid
+  verification: mid
+  tool_use: mid
+speed:
+  tokens_per_sec: 40.0
+  tier: medium
+profile:
+  probe_suite_version: '2026.1'
+  profiled_at: '2026-06-15T12:00:00Z'
+  probe_scores:
+    reasoning: 0.6
+    coding: 0.92
+    long_context: 0.57
+    instruction_following: 0.55
+    verification: 0.5
+    tool_use: 0.48
+  contributor: mat:phase-a-heldout
+  integrity_sha256: 42f8e54cc291334c8e8d0104f20c1c037ea5431124db83e33e111d85a238367c

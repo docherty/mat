@@ -1,0 +1,45 @@
+connector_version: '1.0'
+id: gamma-fast@phase-a
+display_name: Gamma Fast
+endpoint:
+  type: openai
+  base_url: https://openrouter.ai/api/v1
+  model_name: mock/gamma-fast
+  auth_env: OPENROUTER_API_KEY
+context_window: 32000
+max_output_tokens: 4096
+modalities:
+- text
+pricing:
+  input_per_1k: 0.02
+  output_per_1k: 0.04
+  currency: USD
+locality: api
+supports:
+  tools: false
+  json_mode: true
+  streaming: true
+  system_prompt: true
+tool_format: none
+capabilities:
+  reasoning: weak
+  coding: mid
+  long_context: weak
+  instruction_following: mid
+  verification: weak
+  tool_use: weak
+speed:
+  tokens_per_sec: 90.0
+  tier: fast
+profile:
+  probe_suite_version: '2026.1'
+  profiled_at: '2026-06-01T12:00:00Z'
+  probe_scores:
+    reasoning: 0.35
+    coding: 0.52
+    long_context: 0.3
+    instruction_following: 0.48
+    verification: 0.28
+    tool_use: 0.2
+  contributor: mat:phase-a
+  integrity_sha256: 7eb19369403dfd9fb68d27bc64272c89d0f823a7b9ca9a292f31a5896c2c8996

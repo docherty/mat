@@ -1,0 +1,45 @@
+connector_version: '1.0'
+id: alpha-coder@phase-a
+display_name: Alpha Coder
+endpoint:
+  type: openai
+  base_url: https://openrouter.ai/api/v1
+  model_name: mock/alpha-coder
+  auth_env: OPENROUTER_API_KEY
+context_window: 128000
+max_output_tokens: 8192
+modalities:
+- text
+pricing:
+  input_per_1k: 0.05
+  output_per_1k: 0.1
+  currency: USD
+locality: api
+supports:
+  tools: true
+  json_mode: true
+  streaming: true
+  system_prompt: true
+tool_format: openai
+capabilities:
+  reasoning: mid
+  coding: strong
+  long_context: mid
+  instruction_following: strong
+  verification: mid
+  tool_use: strong
+speed:
+  tokens_per_sec: 45.0
+  tier: medium
+profile:
+  probe_suite_version: '2026.1'
+  profiled_at: '2026-06-01T12:00:00Z'
+  probe_scores:
+    reasoning: 0.62
+    coding: 0.81
+    long_context: 0.55
+    instruction_following: 0.74
+    verification: 0.58
+    tool_use: 0.7
+  contributor: mat:phase-a
+  integrity_sha256: a25ab77fc54d03e453fd2f0aa4101577768449bdd45fca1fd22123ef79d4978b
