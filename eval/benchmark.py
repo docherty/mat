@@ -8,7 +8,8 @@ from pathlib import Path
 
 from connectors.loader import load_connectors_dir
 from connectors.paths import default_pool_dir
-from eval.live_loop import LiveCodingLoop, LiveLoopConfig
+from coordinator.checkpoint import load_checkpoint
+from eval.live_loop import LiveCodingLoop, LiveLoopConfig, RoleCoordinator
 from eval.oracle import Task, load_tasks
 
 
@@ -47,6 +48,7 @@ def run_benchmark(
     limit: int | None = None,
     connector_id: str | None = None,
     reflect: bool = False,
+    checkpoint: Path | None = None,
 ) -> BenchmarkSummary:
     pool = load_connectors_dir(pool_dir)
     if not pool:
@@ -61,7 +63,10 @@ def run_benchmark(
     if limit:
         tasks = tasks[:limit]
 
-    loop = LiveCodingLoop(pool, config=LiveLoopConfig())
+    coordinator = None
+    if checkpoint:
+        coordinator = RoleCoordinator(load_checkpoint(checkpoint))
+    loop = LiveCodingLoop(pool, coordinator=coordinator, config=LiveLoopConfig())
     rows: list[BenchmarkRow] = []
 
     for task in tasks:
@@ -162,10 +167,12 @@ def main() -> None:
     )
     parser.add_argument("--connector", help="connector id for single modes")
     parser.add_argument("--limit", type=int, help="cap tasks (smoke tests)")
+    parser.add_argument("--checkpoint", type=Path, help="trained coordinator for orchestrated mode")
     parser.add_argument("--out", type=Path, help="write JSON report")
     args = parser.parse_args()
 
     pool_dir = args.pool or default_pool_dir()
+    ckpt = args.checkpoint
 
     if args.mode == "compare":
         summaries = []
@@ -195,6 +202,7 @@ def main() -> None:
                 split=args.split,
                 mode="orchestrated",
                 limit=args.limit,
+                checkpoint=ckpt,
             )
         )
         report = compare_summaries(summaries)
@@ -206,6 +214,7 @@ def main() -> None:
             limit=args.limit,
             connector_id=args.connector,
             reflect=args.mode == "single_reflect",
+            checkpoint=ckpt if args.mode == "orchestrated" else None,
         )
         report = {"summaries": [asdict(summary)]}
 

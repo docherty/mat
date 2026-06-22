@@ -8,7 +8,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 from connectors.loader import dump_connector, load_connector, load_connectors_dir
-from connectors.paths import default_pool_dir, ensure_user_pool_dir
+from connectors.paths import default_pool_dir
 from connectors.schema import BenchmarkAttestation, CapabilityDim, Connector
 from eval.live_loop import LiveCodingLoop
 from eval.oracle import load_tasks
@@ -71,7 +71,9 @@ def main() -> None:
     if connector is None:
         raise SystemExit(f"connector not found in {pool_dir}: {args.connector}")
 
-    tasks_path = Path(__file__).resolve().parents[1] / "eval" / "tasks" / f"humaneval_{args.split}.json"
+    tasks_path = (
+        Path(__file__).resolve().parents[1] / "eval" / "tasks" / f"humaneval_{args.split}.json"
+    )
     tasks = load_tasks(tasks_path, split=args.split)[: args.limit]
     if args.split == "val":
         print("warning: calibrating on val split — prefer train to avoid leakage", flush=True)

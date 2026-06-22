@@ -31,6 +31,11 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "ruff>=0.8.0",
 ]
+slm = [
+    "torch>=2.2.0",
+    "transformers>=4.45.0",
+    "accelerate>=0.34.0",
+]
 
 [project.scripts]
 mat-profile = "probe_set.cli:main"
@@ -42,6 +47,7 @@ mat-sync-aa = "connectors.cli_sync_aa:main"
 mat-import-aa = "connectors.cli_import_aa:main"
 mat-discover-lmstudio = "connectors.discover_lmstudio:main"
 mat-calibrate = "connectors.calibrate:main"
+mat-pool = "connectors.cli_pool:main"
 
 [build-system]
 requires = ["hatchling"]

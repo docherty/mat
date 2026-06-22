@@ -97,7 +97,7 @@ def call_role(
     draft_code: str = "",
 ) -> tuple[TurnRecord, str]:
     messages = role_messages(task, role, transcript=transcript, draft_code=draft_code)
-    completion = worker.complete(connector, messages)
+    completion = worker.complete(connector, messages, task=task)
     if role == "worker":
         extracted = extract_code(completion.text, entry_point=task.entry_point)
     else:

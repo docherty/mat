@@ -6,10 +6,10 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 
-from connectors.import_aa import connector_from_aa, find_aa_model, load_aa_cache, slugify
+from connectors.import_aa import connector_from_aa, find_aa_model_or_fetch, load_aa_cache, slugify
+from connectors.loader import dump_connector
 from connectors.paths import ensure_user_pool_dir
 from connectors.schema import Endpoint
-from connectors.loader import dump_connector
 
 DEFAULT_LMSTUDIO_CACHE = Path.home() / ".cache" / "lm-studio" / "models"
 DEFAULT_LMSTUDIO_URL = "http://127.0.0.1:1234/v1"
@@ -81,28 +81,29 @@ def install_from_cache(
     out_dir: Path | None = None,
     base_url: str = DEFAULT_LMSTUDIO_URL,
     port_offset: int = 0,
-    skip_missing_aa: bool = False,
+    skip_missing_aa: bool = True,
 ) -> list[Path]:
     """Write one connector per cached model with AA benchmark_import scores."""
     out_dir = out_dir or ensure_user_pool_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
-    models = load_aa_cache()
-    written: list[Path] = []
+    models = None
+    try:
+        models = load_aa_cache(allow_stale=True)
+    except ValueError:
+        models = []
 
-    for i, entry in enumerate(scan_lmstudio_cache(cache_dir)):
+    written: list[Path] = []
+    for entry in scan_lmstudio_cache(cache_dir):
         hint = aa_hint_for_folder(entry["folder_name"])
-        aa = find_aa_model(hint or entry["folder_name"], models) if hint else None
-        if aa is None:
-            aa = find_aa_model(entry["folder_name"], models)
+        aa = find_aa_model_or_fetch(hint or entry["folder_name"], models)
         if aa is None and skip_missing_aa:
             continue
         if aa is None:
             raise ValueError(
                 f"No Artificial Analysis match for {entry['catalog_path']!r} "
-                f"(hint={hint!r}). Run mat-sync-aa or pass a manual mat-import-aa."
+                f"(hint={hint!r}). Run mat-sync-aa or mat-import-aa <slug>."
             )
 
-        slug = aa.get("slug") or slugify(aa.get("name", "model"))
         safe_id = slugify(entry["catalog_path"].replace("/", "-"))
         model_name = lmstudio_model_name(entry["folder_name"])
 
@@ -140,17 +141,19 @@ def install_from_cache(
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Install connectors from LM Studio cache + AA benchmarks")
+    parser = argparse.ArgumentParser(
+        description="Install connectors from LM Studio cache + AA benchmarks"
+    )
     parser.add_argument("--cache", type=Path, default=DEFAULT_LMSTUDIO_CACHE)
     parser.add_argument("--out", type=Path, help="default: ~/.config/mat/connectors")
     parser.add_argument("--base-url", default=DEFAULT_LMSTUDIO_URL)
-    parser.add_argument("--skip-missing-aa", action="store_true")
+    parser.add_argument("--strict-aa", action="store_true", help="fail if any model lacks AA data")
     args = parser.parse_args()
     paths = install_from_cache(
         cache_dir=args.cache,
         out_dir=args.out,
         base_url=args.base_url,
-        skip_missing_aa=args.skip_missing_aa,
+        skip_missing_aa=not args.strict_aa,
     )
     for p in paths:
         print(p)

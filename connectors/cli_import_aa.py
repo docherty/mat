@@ -5,14 +5,21 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from connectors.import_aa import connector_from_aa, fetch_model_by_slug, find_aa_model, load_aa_cache
+from connectors.import_aa import (
+    connector_from_aa,
+    fetch_model_by_slug,
+    find_aa_model,
+    load_aa_cache,
+)
 from connectors.loader import dump_connector
 from connectors.paths import ensure_user_pool_dir
 from connectors.schema import Endpoint
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import connector from Artificial Analysis benchmarks")
+    parser = argparse.ArgumentParser(
+        description="Import connector from Artificial Analysis benchmarks"
+    )
     parser.add_argument("slug", help="AA model slug, e.g. qwen3-6-35b-a3b")
     parser.add_argument("--out", type=Path, help="default: ~/.config/mat/connectors/<slug>.yaml")
     parser.add_argument("--base-url", default="https://openrouter.ai/api/v1")

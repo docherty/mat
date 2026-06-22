@@ -48,8 +48,10 @@ def _check_auth(authorization: str | None) -> None:
 
 
 def create_app(connectors_dir: str | None = None) -> FastAPI:
+    import os
+
     app = FastAPI(title="mat", version="0.1.0")
-    pool_dir = connectors_dir or str(default_pool_dir())
+    pool_dir = connectors_dir or os.environ.get("MAT_POOL_DIR") or str(default_pool_dir())
     pool = load_connectors_dir(pool_dir)
     loop = OrchestrationLoop(pool)
 

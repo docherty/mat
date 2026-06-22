@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from connectors.aa_mapping import capabilities_from_evaluations, normalize_value
 from connectors.discover_lmstudio import aa_hint_for_folder, scan_lmstudio_cache
 from connectors.import_aa import slugify

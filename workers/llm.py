@@ -37,6 +37,7 @@ class LLMWorker:
         *,
         temperature: float = 0.0,
         max_tokens: int | None = None,
+        **kwargs: object,
     ) -> CompletionResult:
         api_key = os.environ.get(connector.endpoint.auth_env, "")
         headers = {"Content-Type": "application/json"}

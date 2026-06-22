@@ -11,6 +11,7 @@ import numpy as np
 
 from connectors.loader import load_connectors_dir
 from connectors.paths import default_pool_dir
+from coordinator.checkpoint import save_checkpoint
 from coordinator.policy import TrainedCoordinator
 from coordinator.train import _heuristic_weights
 from eval.live_loop import LiveCodingLoop, RoleCoordinator
@@ -30,7 +31,6 @@ def train_live(
     if not train_path.exists():
         raise FileNotFoundError("run: python -m eval.datasets.build_humaneval_split")
     tasks = load_tasks(train_path, split="train")[:task_limit]
-    loop = LiveCodingLoop(pool)
 
     def fitness(flat: list[float]) -> float:
         coord = TrainedCoordinator(np.array(flat))
@@ -63,6 +63,7 @@ def train_live(
         "task_limit": task_limit,
         "weights": es.result.xbest.tolist(),
         "seed": seed,
+        "coordinator": best,
     }
 
 
@@ -74,7 +75,9 @@ def main() -> None:
     parser.add_argument("--population", type=int, default=8)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out", type=Path, help="write coordinator checkpoint JSON")
+    parser.add_argument("--checkpoint", type=Path, help="alias for --out")
     args = parser.parse_args()
+    out_path = args.checkpoint or args.out
     result = train_live(
         args.pool or default_pool_dir(),
         task_limit=args.tasks,
@@ -82,9 +85,15 @@ def main() -> None:
         population=args.population,
         seed=args.seed,
     )
-    print(json.dumps(result, indent=2))
-    if args.out:
-        args.out.write_text(json.dumps(result, indent=2) + "\n")
+    serializable = {k: v for k, v in result.items() if k != "coordinator"}
+    print(json.dumps(serializable, indent=2))
+    if out_path:
+        save_checkpoint(
+            result["coordinator"],
+            out_path,
+            meta={k: serializable[k] for k in ("train_pass_at_1", "seed", "generations")},
+        )
+        print(f"checkpoint: {out_path}")
 
 
 if __name__ == "__main__":

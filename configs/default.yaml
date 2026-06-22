@@ -14,7 +14,8 @@ orchestration:
     max: { max_steps: 4, verify_consistency: 3 }
 
 pool:
-  connectors_dir: "connectors/examples"
+  # Runtime pool — default ~/.config/mat/connectors (override with MAT_POOL_DIR)
+  connectors_dir: "~/.config/mat/connectors"
 
 tool_backend:
   max_iterations: 8
