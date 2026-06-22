@@ -1,0 +1,93 @@
+connector_version: '1.1'
+id: deepseek-v4-pro@openrouter
+display_name: DeepSeek V4 Pro
+endpoint:
+  type: openai
+  base_url: https://openrouter.ai/api/v1
+  model_name: deepseek/deepseek-v4-pro
+  auth_env: OPENROUTER_API_KEY
+context_window: 1048576
+max_output_tokens: 384000
+modalities:
+- text
+pricing:
+  input_per_1k: 0.000435
+  output_per_1k: 0.00087
+  currency: USD
+locality: api
+supports:
+  tools: true
+  json_mode: true
+  streaming: true
+  system_prompt: true
+  reasoning: true
+tool_format: openai
+capabilities:
+  reasoning:
+    score: 0.73
+    tier: strong
+  coding:
+    score: 0.81
+    tier: strong
+  long_context:
+    score: 0.72
+    tier: strong
+  instruction_following:
+    score: 0.77
+    tier: strong
+  verification:
+    score: 0.9
+    tier: frontier
+  tool_use:
+    score: 0.96
+    tier: frontier
+speed:
+  tier: medium
+  tokens_per_sec: null
+benchmarks:
+- source: artificial_analysis
+  metric: intelligence_index_v4.1
+  value: 44.0
+  unit: index
+  as_of: '2026-04-24'
+  url: https://artificialanalysis.ai/models/deepseek-v4-pro
+  notes: null
+- source: artificial_analysis
+  metric: swe_bench_verified
+  value: 80.6
+  unit: percent
+  as_of: '2026-04-24'
+  url: https://artificialanalysis.ai/models/deepseek-v4-pro
+  notes: null
+- source: artificial_analysis
+  metric: gpqa_diamond
+  value: 90.1
+  unit: percent
+  as_of: '2026-04-24'
+  url: https://artificialanalysis.ai/models/deepseek-v4-pro
+  notes: null
+- source: artificial_analysis
+  metric: tau2_bench_telecom
+  value: 96.2
+  unit: percent
+  as_of: '2026-04-24'
+  url: https://artificialanalysis.ai/models/deepseek-v4-pro
+  notes: null
+- source: artificial_analysis
+  metric: gdpval_aa_v2
+  value: 1558.0
+  unit: index
+  as_of: '2026-04-24'
+  url: https://artificialanalysis.ai/models/deepseek-v4-pro
+  notes: null
+profile:
+  profile_method: benchmark_import
+  catalog: openrouter
+  catalog_id: deepseek/deepseek-v4-pro
+  probe_suite_version: null
+  profiled_at: '2026-06-22T14:00:00Z'
+  contributor: mat:examples
+  integrity_sha256: 77c74b8a8f976d80c09b33e35a6937279a1ea0db2f8df68648bba64d56837f55
+  notes: "Operational fields from OpenRouter API 2026-06-22. Capability scores from\
+    \ Artificial Analysis v4.1 (reasoning, max effort) and cited sub-benchmarks. AA\
+    \ notes high verbosity on index eval \u2014 factor into cost-aware routing."

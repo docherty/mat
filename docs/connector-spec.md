@@ -182,7 +182,10 @@ inferred from tier midpoints. Re-save with `dump_connector()` to upgrade on disk
 Real connectors (OpenRouter, benchmark-imported):
 
 - [`connectors/examples/openrouter-deepseek-v4-flash.yaml`](../connectors/examples/openrouter-deepseek-v4-flash.yaml)
+- [`connectors/examples/openrouter-deepseek-v4-pro.yaml`](../connectors/examples/openrouter-deepseek-v4-pro.yaml)
 - [`connectors/examples/openrouter-tencent-hy3-preview.yaml`](../connectors/examples/openrouter-tencent-hy3-preview.yaml)
+- [`connectors/examples/openrouter-mimo-v2.5.yaml`](../connectors/examples/openrouter-mimo-v2.5.yaml)
+- [`connectors/examples/openrouter-mimo-v2.5-pro.yaml`](../connectors/examples/openrouter-mimo-v2.5-pro.yaml)
 
 Phase A simulation fixtures remain in `connectors/examples/alpha-*.yaml`.
 
