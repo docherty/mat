@@ -1,0 +1,47 @@
+# Boilerplate only — copy to your installed pool, do not use for routing.
+
+connector_version: "1.1"
+id: my-model@lmstudio
+display_name: My Model (LM Studio template)
+
+endpoint:
+  type: openai
+  base_url: http://127.0.0.1:1234/v1
+  model_name: REPLACE_WITH_LM_STUDIO_MODEL_ID
+  auth_env: LMSTUDIO_API_KEY
+
+context_window: 32768
+max_output_tokens: 4096
+locality: local
+
+pricing:
+  input_per_1k: 0.0
+  output_per_1k: 0.0
+  currency: USD
+
+supports:
+  tools: false
+  json_mode: false
+  streaming: true
+  system_prompt: true
+  reasoning: false
+
+tool_format: none
+
+# HAND PLACEHOLDERS — run mat-discover-lmstudio or mat-import-aa for real scores.
+capabilities:
+  reasoning: { score: 0.5, tier: mid }
+  coding: { score: 0.5, tier: mid }
+  long_context: { score: 0.5, tier: mid }
+  instruction_following: { score: 0.5, tier: mid }
+  verification: { score: 0.5, tier: mid }
+  tool_use: { score: 0.5, tier: mid }
+
+speed:
+  tier: medium
+
+profile:
+  profile_method: hand
+  profiled_at: "2026-01-01T00:00:00+00:00"
+  contributor: mat:example
+  notes: "EXAMPLE ONLY. Installed connectors live in ~/.config/mat/connectors/"

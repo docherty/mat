@@ -85,6 +85,8 @@ def best_connector_for_task(task: Task, pool: list[Connector]) -> Connector:
 
 def synthesize_code(task: Task, connector: Connector) -> str:
     """Simulate code generation quality from connector coding score vs task difficulty."""
+    if not task.solution:
+        raise ValueError(f"task {task.id} has no solution for simulated harness")
     coding = connector.capabilities["coding"].score
     margin = coding - task.difficulty
     if margin >= 0.1:

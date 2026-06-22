@@ -14,26 +14,37 @@ TASKS_PATH = Path(__file__).parent / "tasks" / "phase_a_tasks.json"
 class Task:
     id: str
     prompt: str
-    solution: str
     tests: str
     difficulty: float
     required_tags: dict[str, float]
+    solution: str | None = None
+    entry_point: str | None = None
+    split: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict) -> Task:
         return cls(
             id=data["id"],
             prompt=data["prompt"],
-            solution=data["solution"],
             tests=data["tests"],
             difficulty=float(data["difficulty"]),
             required_tags=dict(data["required_tags"]),
+            solution=data.get("solution"),
+            entry_point=data.get("entry_point"),
+            split=data.get("split"),
         )
 
 
-def load_tasks(path: Path | None = None) -> list[Task]:
+def load_tasks(
+    path: Path | None = None,
+    *,
+    split: str | None = None,
+) -> list[Task]:
     raw = json.loads((path or TASKS_PATH).read_text())
-    return [Task.from_dict(item) for item in raw]
+    tasks = [Task.from_dict(item) for item in raw]
+    if split:
+        tasks = [t for t in tasks if t.split == split]
+    return tasks
 
 
 @dataclass

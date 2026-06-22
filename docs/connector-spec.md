@@ -189,6 +189,24 @@ Real connectors (OpenRouter, benchmark-imported):
 
 Phase A simulation fixtures remain in `connectors/examples/alpha-*.yaml`.
 
+## Examples vs installed
+
+| Directory | Role |
+|-----------|------|
+| `connectors/examples/` | Boilerplate and reference imports — **not** the runtime pool |
+| `~/.config/mat/connectors/` | Default **installed** pool (`MAT_POOL_DIR` to override) |
+
+Installed connectors must use `profile_method: benchmark_import` or `mat_probe`, with cited
+`benchmarks[]` from Artificial Analysis (or `mat_calibration` after `mat-calibrate`).
+
+```bash
+export ARTIFICIAL_ANALYSIS_API_KEY=...
+mat-sync-aa
+mat-discover-lmstudio    # from ~/.cache/lm-studio/models
+mat-import-aa <slug> --local --model-name <lm-studio-id>
+mat-calibrate --connector <id> --limit 10
+```
+
 ## Related tooling
 
 ```bash

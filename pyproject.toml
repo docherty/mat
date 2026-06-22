@@ -36,6 +36,12 @@ dev = [
 mat-profile = "probe_set.cli:main"
 mat-serve = "api.server:main"
 mat-phase-a = "eval.phase_a:main"
+mat-benchmark = "eval.benchmark:main"
+mat-train-live = "eval.train_live:main"
+mat-sync-aa = "connectors.cli_sync_aa:main"
+mat-import-aa = "connectors.cli_import_aa:main"
+mat-discover-lmstudio = "connectors.discover_lmstudio:main"
+mat-calibrate = "connectors.calibrate:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -51,6 +57,7 @@ packages = [
     "tool_backend",
     "eval",
     "traces",
+    "workers",
 ]
 
 [tool.ruff]

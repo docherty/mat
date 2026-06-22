@@ -227,3 +227,7 @@ project-docs/
 workspace/
 traces/*.jsonl
 .env
+
+# Installed connectors (real pool) — use ~/.config/mat/connectors/ by default
+connectors/installed/*.yaml
+!connectors/installed/README.md

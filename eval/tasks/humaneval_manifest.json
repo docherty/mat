@@ -1,0 +1,7 @@
+{
+  "dataset": "HumanEval",
+  "seed": 42,
+  "train_count": 41,
+  "val_count": 23,
+  "rule": "val never used for coordinator fitness; report val pass@1 only"
+}

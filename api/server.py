@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from connectors.loader import load_connectors_dir
+from connectors.paths import default_pool_dir
 from loop.runner import OrchestrationLoop
 
 QUALITY_TIERS = ("fast", "balanced", "max")
@@ -46,9 +47,10 @@ def _check_auth(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="invalid gateway key")
 
 
-def create_app(connectors_dir: str = "connectors/examples") -> FastAPI:
+def create_app(connectors_dir: str | None = None) -> FastAPI:
     app = FastAPI(title="mat", version="0.1.0")
-    pool = load_connectors_dir(connectors_dir)
+    pool_dir = connectors_dir or str(default_pool_dir())
+    pool = load_connectors_dir(pool_dir)
     loop = OrchestrationLoop(pool)
 
     @app.get("/v1/models")
