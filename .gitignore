@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local project docs (not for open source)
+project-docs/
+
+# macOS
+.DS_Store
+
+# mat runtime
+workspace/
+traces/*.jsonl
+.env

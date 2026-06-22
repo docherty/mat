@@ -1,0 +1,31 @@
+# Default mat configuration
+
+gateway:
+  host: "127.0.0.1"
+  port: 8080
+  key_env: "MAT_GATEWAY_KEY"
+
+orchestration:
+  revision_cap: 2
+  progress_narration: "thinking"  # thinking | content | off
+  quality_tiers:
+    fast: { orchestrate: false }
+    balanced: { max_steps: 3 }
+    max: { max_steps: 4, verify_consistency: 3 }
+
+pool:
+  connectors_dir: "connectors/examples"
+
+tool_backend:
+  max_iterations: 8
+  client_tools: "relay"
+  internal_tools:
+    enabled: [run_tests, read, write, bash, grep]
+    sandbox:
+      fs_scope: "./workspace"
+      network: false
+      timeout_sec: 30
+
+traces:
+  dir: "traces"
+  redact_secrets: true
