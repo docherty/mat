@@ -71,13 +71,11 @@ def tag_weights(task: Task) -> dict[str, float]:
 
 
 def connector_score(task: Task, connector: Connector) -> float:
-    from connectors.schema import tier_to_score
-
     weights = tag_weights(task)
     total_w = sum(weights.values()) or 1.0
     score = 0.0
     for tag, weight in weights.items():
-        score += weight * tier_to_score(connector.capabilities[tag])
+        score += weight * connector.capabilities[tag].score
     return score / total_w
 
 
@@ -86,10 +84,8 @@ def best_connector_for_task(task: Task, pool: list[Connector]) -> Connector:
 
 
 def synthesize_code(task: Task, connector: Connector) -> str:
-    """Simulate code generation quality from connector coding tier vs task difficulty."""
-    from connectors.schema import tier_to_score
-
-    coding = tier_to_score(connector.capabilities["coding"])
+    """Simulate code generation quality from connector coding score vs task difficulty."""
+    coding = connector.capabilities["coding"].score
     margin = coding - task.difficulty
     if margin >= 0.1:
         return task.solution
@@ -100,9 +96,7 @@ def synthesize_code(task: Task, connector: Connector) -> str:
 
 
 def step_budget(task: Task, connector: Connector) -> int:
-    from connectors.schema import tier_to_score
-
-    if task.difficulty < 0.2 and tier_to_score(connector.capabilities["coding"]) >= 0.5:
+    if task.difficulty < 0.2 and connector.capabilities["coding"].score >= 0.5:
         return 1
     if task.difficulty < 0.45:
         return 2

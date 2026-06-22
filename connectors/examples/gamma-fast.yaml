@@ -1,4 +1,4 @@
-connector_version: '1.0'
+connector_version: '1.1'
 id: gamma-fast@phase-a
 display_name: Gamma Fast
 endpoint:
@@ -20,26 +20,37 @@ supports:
   json_mode: true
   streaming: true
   system_prompt: true
+  reasoning: false
 tool_format: none
 capabilities:
-  reasoning: weak
-  coding: mid
-  long_context: weak
-  instruction_following: mid
-  verification: weak
-  tool_use: weak
+  reasoning:
+    score: 0.25
+    tier: weak
+  coding:
+    score: 0.5
+    tier: mid
+  long_context:
+    score: 0.25
+    tier: weak
+  instruction_following:
+    score: 0.5
+    tier: mid
+  verification:
+    score: 0.25
+    tier: weak
+  tool_use:
+    score: 0.25
+    tier: weak
 speed:
-  tokens_per_sec: 90.0
   tier: fast
+  tokens_per_sec: 90.0
+benchmarks: []
 profile:
+  profile_method: mat_probe
+  catalog: null
+  catalog_id: null
   probe_suite_version: '2026.1'
   profiled_at: '2026-06-01T12:00:00Z'
-  probe_scores:
-    reasoning: 0.35
-    coding: 0.52
-    long_context: 0.3
-    instruction_following: 0.48
-    verification: 0.28
-    tool_use: 0.2
   contributor: mat:phase-a
-  integrity_sha256: 7eb19369403dfd9fb68d27bc64272c89d0f823a7b9ca9a292f31a5896c2c8996
+  integrity_sha256: 5cd2dd1bd71302432410b1e927765b6513e290a4d8f8cc86c1e5941455080283
+  notes: null

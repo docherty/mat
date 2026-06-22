@@ -1,4 +1,4 @@
-connector_version: '1.0'
+connector_version: '1.1'
 id: delta-heldout@phase-a
 display_name: Delta Held-out
 endpoint:
@@ -20,26 +20,37 @@ supports:
   json_mode: true
   streaming: true
   system_prompt: true
+  reasoning: false
 tool_format: openai
 capabilities:
-  reasoning: mid
-  coding: frontier
-  long_context: mid
-  instruction_following: mid
-  verification: mid
-  tool_use: mid
+  reasoning:
+    score: 0.5
+    tier: mid
+  coding:
+    score: 1.0
+    tier: frontier
+  long_context:
+    score: 0.5
+    tier: mid
+  instruction_following:
+    score: 0.5
+    tier: mid
+  verification:
+    score: 0.5
+    tier: mid
+  tool_use:
+    score: 0.5
+    tier: mid
 speed:
-  tokens_per_sec: 40.0
   tier: medium
+  tokens_per_sec: 40.0
+benchmarks: []
 profile:
+  profile_method: mat_probe
+  catalog: null
+  catalog_id: null
   probe_suite_version: '2026.1'
   profiled_at: '2026-06-15T12:00:00Z'
-  probe_scores:
-    reasoning: 0.6
-    coding: 0.92
-    long_context: 0.57
-    instruction_following: 0.55
-    verification: 0.5
-    tool_use: 0.48
   contributor: mat:phase-a-heldout
-  integrity_sha256: 42f8e54cc291334c8e8d0104f20c1c037ea5431124db83e33e111d85a238367c
+  integrity_sha256: 2e0cea57326eba676724dc05b323acedcf0fb2acea1ab1b11f953b8afe0d57df
+  notes: null

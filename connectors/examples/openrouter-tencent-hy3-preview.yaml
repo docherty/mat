@@ -1,0 +1,65 @@
+connector_version: '1.1'
+id: tencent-hy3-preview@openrouter
+display_name: Tencent Hy3 Preview
+endpoint:
+  type: openai
+  base_url: https://openrouter.ai/api/v1
+  model_name: tencent/hy3-preview
+  auth_env: OPENROUTER_API_KEY
+context_window: 262144
+max_output_tokens: 8192
+modalities:
+- text
+pricing:
+  input_per_1k: 6.3e-05
+  output_per_1k: 0.00021
+  currency: USD
+locality: api
+supports:
+  tools: true
+  json_mode: false
+  streaming: true
+  system_prompt: true
+  reasoning: true
+tool_format: openai
+capabilities:
+  reasoning:
+    score: 0.7
+    tier: strong
+  coding:
+    score: 0.76
+    tier: strong
+  long_context:
+    score: 0.72
+    tier: strong
+  instruction_following:
+    score: 0.8
+    tier: strong
+  verification:
+    score: 0.7
+    tier: strong
+  tool_use:
+    score: 0.84
+    tier: strong
+speed:
+  tier: medium
+  tokens_per_sec: null
+benchmarks:
+- source: artificial_analysis
+  metric: intelligence_index_v4.1
+  value: 42.0
+  unit: index
+  as_of: '2026-04-21'
+  url: https://artificialanalysis.ai/models/hy3
+  notes: null
+profile:
+  profile_method: benchmark_import
+  catalog: openrouter
+  catalog_id: tencent/hy3-preview
+  probe_suite_version: null
+  profiled_at: '2026-06-22T12:00:00Z'
+  contributor: mat:examples
+  integrity_sha256: e9e54943cbae5ba2e776b135247d7f9509f8a40837d0923d070d45edc080d9e1
+  notes: Operational fields from OpenRouter API 2026-06-22. Capability scores from
+    AA index and vendor agent/IF emphasis. Coding score is conservative pending mat
+    probe or verified SWE-bench number.

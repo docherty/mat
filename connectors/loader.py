@@ -7,10 +7,10 @@ import yaml
 from connectors.schema import Connector, compute_integrity_hash, validate_connector
 
 
-def load_connector(path: str | Path) -> Connector:
+def load_connector(path: str | Path, *, check_hash: bool = True) -> Connector:
     data = yaml.safe_load(Path(path).read_text())
     connector = Connector.model_validate(data)
-    errors = validate_connector(connector)
+    errors = validate_connector(connector, check_hash=check_hash)
     if errors:
         raise ValueError(f"invalid connector {path}: {'; '.join(errors)}")
     return connector

@@ -43,8 +43,17 @@ def test_oracle_fails_bad_code():
 def test_connectors_load():
     for path in EXAMPLES.glob("*.yaml"):
         connector = load_connector(path)
-        assert connector.connector_version == "1.0"
+        assert connector.connector_version in ("1.0", "1.1")
         assert len(connector.capability_vector()) == 6
+        for tag in connector.capabilities:
+            assert 0.0 <= connector.capabilities[tag].score <= 1.0
+
+
+def test_openrouter_examples_differ_on_coding():
+    flash = load_connector(EXAMPLES / "openrouter-deepseek-v4-flash.yaml")
+    hy3 = load_connector(EXAMPLES / "openrouter-tencent-hy3-preview.yaml")
+    assert flash.capabilities["coding"].score > hy3.capabilities["coding"].score
+    assert flash.benchmarks[0].source == "artificial_analysis"
 
 
 def test_integrity_hash_stable():

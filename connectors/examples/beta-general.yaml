@@ -1,4 +1,4 @@
-connector_version: '1.0'
+connector_version: '1.1'
 id: beta-general@phase-a
 display_name: Beta General
 endpoint:
@@ -20,26 +20,37 @@ supports:
   json_mode: true
   streaming: true
   system_prompt: true
+  reasoning: false
 tool_format: openai
 capabilities:
-  reasoning: strong
-  coding: mid
-  long_context: strong
-  instruction_following: strong
-  verification: strong
-  tool_use: mid
+  reasoning:
+    score: 0.75
+    tier: strong
+  coding:
+    score: 0.5
+    tier: mid
+  long_context:
+    score: 0.75
+    tier: strong
+  instruction_following:
+    score: 0.75
+    tier: strong
+  verification:
+    score: 0.75
+    tier: strong
+  tool_use:
+    score: 0.5
+    tier: mid
 speed:
-  tokens_per_sec: 35.0
   tier: medium
+  tokens_per_sec: 35.0
+benchmarks: []
 profile:
+  profile_method: mat_probe
+  catalog: null
+  catalog_id: null
   probe_suite_version: '2026.1'
   profiled_at: '2026-06-01T12:00:00Z'
-  probe_scores:
-    reasoning: 0.79
-    coding: 0.58
-    long_context: 0.82
-    instruction_following: 0.8
-    verification: 0.76
-    tool_use: 0.52
   contributor: mat:phase-a
-  integrity_sha256: 231021698e415d5131d267c85f4215f621311746daa9201c1121588cb2a34d6f
+  integrity_sha256: dc5ed974a4bd876e25a2033aabd7ff157a5c56c6755a011ea47a45495401bb92
+  notes: null
