@@ -52,20 +52,28 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
     load_env()
     app = FastAPI(title="mat", version="0.1.0")
     pool_dir = connectors_dir or os.environ.get("MAT_POOL_DIR") or str(default_pool_dir())
-    try:
-        pool = load_connectors_dir(pool_dir)
-    except (OSError, ValueError) as exc:
-        pool = []
-        app.state.pool_error = str(exc)
-    else:
-        app.state.pool_error = None
     app.state.pool_dir = pool_dir
+
+    def _load_pool() -> list:
+        try:
+            pool = load_connectors_dir(pool_dir)
+        except (OSError, ValueError) as exc:
+            app.state.pool_error = str(exc)
+            return []
+        app.state.pool_error = None
+        return pool
+
+    pool = _load_pool()
 
     def _loop(tier: str) -> OrchestrationLoop:
         return OrchestrationLoop.from_env(pool, quality_tier=tier)
 
     @app.get("/health")
     def health() -> dict:
+        # If the server started before connectors were fixed, allow self-healing without restart.
+        nonlocal pool
+        if app.state.pool_error:
+            pool = _load_pool()
         return {
             "status": "ok",
             "live": live_enabled(),
@@ -89,6 +97,9 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
         idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     ):
         _check_auth(authorization)
+        nonlocal pool
+        if app.state.pool_error:
+            pool = _load_pool()
         if not pool:
             raise HTTPException(
                 status_code=503,

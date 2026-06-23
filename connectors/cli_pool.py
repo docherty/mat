@@ -17,6 +17,20 @@ from connectors.paths import default_pool_dir, is_example_connector
 from connectors.pool_curated import apply_curated_pool
 
 
+def cmd_rehash(pool_dir: Path) -> int:
+    """Rewrite integrity_sha256 for all connectors in the pool dir."""
+    from connectors.loader import dump_connector
+
+    rewritten = 0
+    for path in sorted(pool_dir.glob("*.yaml")):
+        # Ignore existing hash; re-save with current schema + hash.
+        c = load_connector(path, check_hash=False)
+        dump_connector(c, path)
+        rewritten += 1
+    print(f"rehash OK ({rewritten} connector(s))")
+    return 0
+
+
 def cmd_list(pool_dir: Path) -> int:
     if not pool_dir.exists() or not any(pool_dir.glob("*.yaml")):
         print(f"no connectors in {pool_dir}")
@@ -139,7 +153,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="List or verify installed connector pool")
     parser.add_argument(
         "command",
-        choices=("list", "verify", "sync-lmstudio", "lmstudio-models", "apply"),
+        choices=("list", "verify", "sync-lmstudio", "lmstudio-models", "apply", "rehash"),
     )
     parser.add_argument("--pool", type=Path, default=None)
     parser.add_argument("--base-url", default=DEFAULT_LMSTUDIO_URL)
@@ -161,6 +175,8 @@ def main() -> None:
             Path(__file__).resolve().parent / "curated" / "local-dev-pool.yaml"
         )
         raise SystemExit(cmd_apply(pool, curated))
+    if args.command == "rehash":
+        raise SystemExit(cmd_rehash(pool))
     raise SystemExit(cmd_lmstudio_models(args.base_url))
 
 

@@ -27,6 +27,10 @@ def main() -> None:
     parser.add_argument("--base-url", default="https://openrouter.ai/api/v1")
     parser.add_argument("--model-name", help="API model id (OpenRouter slug, LM Studio name, etc.)")
     parser.add_argument("--local", action="store_true", help="local LM Studio endpoint")
+    parser.add_argument(
+        "--auth-env",
+        help="env var name for API key (default: OPENROUTER_API_KEY; local: LMSTUDIO_API_KEY)",
+    )
     parser.add_argument("--connector-id")
     args = parser.parse_args()
 
@@ -39,7 +43,7 @@ def main() -> None:
 
     base_url = "http://127.0.0.1:1234/v1" if args.local else args.base_url
     model_name = args.model_name or aa.get("slug") or args.slug
-    auth = "LMSTUDIO_API_KEY" if args.local else "OPENROUTER_API_KEY"
+    auth = args.auth_env or ("LMSTUDIO_API_KEY" if args.local else "OPENROUTER_API_KEY")
 
     endpoint = Endpoint(type="openai", base_url=base_url, model_name=model_name, auth_env=auth)
     connector = connector_from_aa(

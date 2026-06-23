@@ -6,7 +6,7 @@ mat is an open-source orchestration layer that looks like a normal OpenAI API en
 Point your existing client at it; behind the scenes it decomposes requests, routes work
 to a swappable model pool, verifies where ground truth exists, and returns one answer.
 
-You run it. You hold the downstream API keys. We host nothing.
+run it locally on your machine and route to a pool of local or api-accessed models.
 
 ## What it is
 
