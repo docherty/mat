@@ -20,6 +20,7 @@ class LoopResult:
     passed: bool
     steps: int
     connector_id: str
+    model_id: str | None = None
     stages: list[str] = field(default_factory=list)
     input_tokens: int = 0
     output_tokens: int = 0
@@ -65,6 +66,31 @@ class OrchestrationLoop:
         return self._run_simulated(messages, coding_task=coding_task)
 
     def _run_live(self, messages: list[dict], *, coding_task: dict | None) -> LoopResult:
+        # Non-coding chat should behave like a normal OpenAI gateway: route once, then passthrough.
+        if coding_task is None and not is_coding_request(messages):
+            difficulty = assess_difficulty(messages)
+            task = Task(
+                id="chat",
+                prompt=extract_coding_prompt(messages),
+                tests="",
+                difficulty=difficulty,
+                required_tags={"instruction_following": 1.0},
+                entry_point=None,
+            )
+            conn = self._role_coordinator.pick(task, self.pool, role="worker")
+            completion = self.worker.complete(conn, messages)
+            return LoopResult(
+                answer=completion.text,
+                passed=True,
+                steps=1,
+                connector_id=conn.id,
+                model_id=completion.model,
+                stages=["chat_passthrough"],
+                input_tokens=completion.input_tokens,
+                output_tokens=completion.output_tokens,
+                estimated_cost_usd=0.0,
+            )
+
         config = LiveLoopConfig(
             revision_cap=self.revision_cap,
             use_thinker=self.quality_tier != "fast",
@@ -108,6 +134,7 @@ class OrchestrationLoop:
             passed=result.passed,
             steps=result.steps,
             connector_id=primary,
+            model_id=result.turns[-1].completion.model if result.turns else None,
             stages=result.stages,
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,

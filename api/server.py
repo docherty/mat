@@ -84,10 +84,10 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
 
     @app.get("/v1/models")
     def list_models() -> dict:
-        data = [
-            {"id": tier, "object": "model", "owned_by": "mat"}
-            for tier in QUALITY_TIERS
-        ]
+        # OpenAI-compatible: list both the routing tiers and installed connector ids.
+        data = [{"id": tier, "object": "model", "owned_by": "mat"} for tier in QUALITY_TIERS]
+        for c in pool:
+            data.append({"id": c.id, "object": "model", "owned_by": "mat"})
         return {"object": "list", "data": data}
 
     @app.post("/v1/chat/completions")
@@ -139,8 +139,9 @@ def _completion_payload(result, tier: str) -> dict:
             "completion_tokens": result.output_tokens,
             "total_tokens": result.input_tokens + result.output_tokens,
             "x_mat": {
-                "stages": result.steps,
+                "stages": result.stages,
                 "connector_id": result.connector_id,
+                "model_id": result.model_id,
                 "passed": result.passed,
                 "cost_usd": result.estimated_cost_usd,
             },
