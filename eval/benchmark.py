@@ -10,7 +10,8 @@ import numpy as np
 
 from connectors.dotenv import load_env
 from connectors.pool_resolver import resolve_pool
-from coordinator.checkpoint import load_checkpoint
+from coordinator.checkpoint import checkpoint_type, load_checkpoint
+from coordinator.factory import load_role_coordinator
 from coordinator.train import _heuristic_weights
 from eval.live_loop import LiveCodingLoop, LiveLoopConfig, LiveLoopResult, RoleCoordinator, trinity_loop_config
 from eval.oracle import Task, load_tasks
@@ -71,7 +72,9 @@ def run_benchmark(
 
     coordinator = None
     if checkpoint:
-        coordinator = RoleCoordinator(load_checkpoint(checkpoint))
+        kind = checkpoint_type(checkpoint)
+        style = "slm" if kind == "slm_linear" else None
+        coordinator = load_role_coordinator(checkpoint=checkpoint, style=style)
     config = loop_config or LiveLoopConfig()
     loop = LiveCodingLoop(pool, coordinator=coordinator, config=config)
     rows: list[BenchmarkRow] = []
@@ -196,8 +199,12 @@ def _per_question_best(summaries: list[BenchmarkSummary]) -> float | None:
 
 
 def _checkpoint_is_trained(path: Path) -> bool:
-    """True if checkpoint came from a real mat-train-live run, not heuristic warm-start."""
+    """True if checkpoint came from a real training run, not heuristic warm-start."""
     raw = json.loads(path.read_text())
+    if raw.get("type") == "slm_linear":
+        task_limit = int(raw.get("task_limit") or 0)
+        generations = int(raw.get("generations") or 0)
+        return task_limit >= 5 and generations >= 3
     weights = np.array(raw.get("weights", []), dtype=float)
     if weights.size and not np.allclose(weights, _heuristic_weights()):
         return True
@@ -213,7 +220,7 @@ def _require_trained_checkpoint(path: Path | None, *, force: bool) -> None:
         return
     raise SystemExit(
         f"checkpoint {path} is untrained (heuristic weights only). "
-        "Run mat-train-live first, or pass --allow-untrained-checkpoint to override."
+        "Run mat-train-live or mat-train-live-slm first, or pass --allow-untrained-checkpoint."
     )
 
 

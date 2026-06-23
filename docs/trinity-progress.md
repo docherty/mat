@@ -24,9 +24,19 @@ Plan: [trinity-alignment.md](./trinity-alignment.md) · Paper: [arXiv:2512.04695
 
 ---
 
-## Active run
+| 10 | SLM coordinator train + val compare | **running** | `traces/train_live_slm.log` |
 
-None. Last compare: `traces/val_compare_trained.json`.
+---
+
+## Active run (overnight)
+
+```bash
+tail -f traces/train_live_slm.log
+# or full pipeline:
+tail -f traces/overnight_slm.log
+```
+
+Checkpoint: `~/.config/mat/coordinator/latest_slm.json`
 
 ```bash
 # Union ceiling only (fastest diagnostic)
@@ -38,10 +48,16 @@ mat-benchmark --split val --mode compare \
   --checkpoint ~/.config/mat/coordinator/latest.json \
   --out traces/val_compare_trained.json 2>&1 | tee traces/val_compare_trained.log
 
-# Coordinator training (hours; prints each eval + generation)
+# Coordinator training (train split only)
 mat-train-live --tasks 10 --generations 8 --population 8 \
-  --checkpoint ~/.config/mat/coordinator/latest.json \
-  2>&1 | tee traces/train_live.log
+  --checkpoint ~/.config/mat/coordinator/latest.json
+
+# Trinity SLM head (pip install mat[slm]; transcript hidden states)
+mat-train-live-slm --tasks 20 --generations 10 --parallel 4 \
+  --checkpoint ~/.config/mat/coordinator/latest_slm.json
+
+# Overnight train + compare
+bash scripts/overnight_slm.sh
 ```
 
 Watch progress: `tail -f traces/val_qwen_single.log` (or whichever log is running).

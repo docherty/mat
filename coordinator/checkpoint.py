@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
 from coordinator.policy import TrainedCoordinator
 
 DEFAULT_CHECKPOINT = Path.home() / ".config" / "mat" / "coordinator" / "latest.json"
+DEFAULT_SLM_CHECKPOINT = Path.home() / ".config" / "mat" / "coordinator" / "latest_slm.json"
 CHECKPOINT_VERSION = 1
 
 
@@ -31,6 +33,31 @@ def save_checkpoint(
     return path
 
 
+def save_slm_checkpoint(
+    coordinator: Any,
+    path: Path | None = None,
+    *,
+    meta: dict | None = None,
+) -> Path:
+    from coordinator.slm_coordinator import SLMCoordinator
+
+    if not isinstance(coordinator, SLMCoordinator):
+        raise TypeError("expected SLMCoordinator")
+    path = path or DEFAULT_SLM_CHECKPOINT
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "type": "slm_linear",
+        "version": CHECKPOINT_VERSION,
+        "model_id": coordinator.config.model_id,
+        "hidden_size": coordinator.config.hidden_size,
+        "weights": coordinator.head_weights.tolist(),
+        "saved_at": datetime.now(UTC).isoformat(),
+        **(meta or {}),
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n")
+    return path
+
+
 def load_checkpoint(path: Path | None = None) -> TrainedCoordinator:
     path = path or DEFAULT_CHECKPOINT
     if not path.exists():
@@ -39,3 +66,9 @@ def load_checkpoint(path: Path | None = None) -> TrainedCoordinator:
     if raw.get("type") != "trained_linear":
         raise ValueError(f"unsupported checkpoint type: {raw.get('type')}")
     return TrainedCoordinator(np.array(raw["weights"], dtype=float))
+
+
+def checkpoint_type(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    return json.loads(path.read_text()).get("type")
