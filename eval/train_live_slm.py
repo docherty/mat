@@ -56,8 +56,26 @@ def train_live_slm(
         tokens = 0
 
         def one(task):
-            r = loop.run_orchestrated(task)
-            return r
+            try:
+                return loop.run_orchestrated(task)
+            except Exception as exc:
+                print(f"train-live-slm task {task.id} ERROR {type(exc).__name__}: {exc}", flush=True)
+                from eval.live_loop import LiveLoopResult
+
+                return LiveLoopResult(
+                    task_id=task.id,
+                    passed=False,
+                    code="",
+                    turns=[],
+                    steps=0,
+                    revisions=0,
+                    input_tokens=0,
+                    output_tokens=0,
+                    estimated_cost_usd=0.0,
+                    connector_ids=[],
+                    stages=["error"],
+                    error=str(exc),
+                )
 
         if task_workers > 1 and not mock:
             with ThreadPoolExecutor(max_workers=task_workers) as ex:
@@ -104,7 +122,11 @@ def train_live_slm(
             with ThreadPoolExecutor(max_workers=parallel_workers) as ex:
                 futures = {ex.submit(eval_candidate, list(x)): i for i, x in enumerate(candidates)}
                 for fut in as_completed(futures):
-                    fitnesses[futures[fut]] = fut.result()
+                    try:
+                        fitnesses[futures[fut]] = fut.result()
+                    except Exception as exc:
+                        print(f"train-live-slm candidate ERROR {exc}", flush=True)
+                        fitnesses[futures[fut]] = 0.0
         else:
             fitnesses = [eval_candidate(list(x)) for x in candidates]
         es.tell(candidates, fitnesses)

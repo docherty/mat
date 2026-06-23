@@ -15,8 +15,8 @@ mat-train-live-slm \
   --tasks "${MAT_SLM_TASKS:-20}" \
   --generations "${MAT_SLM_GENERATIONS:-10}" \
   --population "${MAT_SLM_POPULATION:-8}" \
-  --parallel "${MAT_SLM_PARALLEL:-4}" \
-  --task-workers "${MAT_SLM_TASK_WORKERS:-2}" \
+  --parallel "${MAT_SLM_PARALLEL:-2}" \
+  --task-workers "${MAT_SLM_TASK_WORKERS:-1}" \
   --checkpoint "$CKPT" \
   2>&1 | tee -a "$LOG_DIR/train_live_slm.log"
 
