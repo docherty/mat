@@ -38,6 +38,12 @@ mat-pool verify
 
 Installed YAML files land in **`~/.config/mat/connectors/`**. The repo's `connectors/examples/` directory is boilerplate only.
 
+If you have API connectors (Venice/OpenRouter), sync pricing into the installed YAMLs:
+
+```bash
+mat-pool sync-pricing
+```
+
 Override the pool path:
 
 ```bash

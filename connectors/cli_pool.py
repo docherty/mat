@@ -15,6 +15,7 @@ from connectors.lmstudio_api import (
 from connectors.loader import load_connector
 from connectors.paths import default_pool_dir, is_example_connector
 from connectors.pool_curated import apply_curated_pool
+from connectors.provider_pricing import sync_pricing_for_endpoint
 
 
 def cmd_rehash(pool_dir: Path) -> int:
@@ -28,6 +29,48 @@ def cmd_rehash(pool_dir: Path) -> int:
         dump_connector(c, path)
         rewritten += 1
     print(f"rehash OK ({rewritten} connector(s))")
+    return 0
+
+
+def cmd_sync_pricing(pool_dir: Path) -> int:
+    """Populate/refresh pricing for API connectors (Venice/OpenRouter)."""
+    from connectors.loader import dump_connector
+
+    # group by (base_url, auth_env) so we fetch each provider listing once
+    groups: dict[tuple[str, str], list[Path]] = {}
+    for path in sorted(pool_dir.glob("*.yaml")):
+        c = load_connector(path)
+        if c.locality != "api":
+            continue
+        key = (c.endpoint.base_url.rstrip("/"), c.endpoint.auth_env)
+        groups.setdefault(key, []).append(path)
+
+    updated = 0
+    for (base_url, auth_env), paths in sorted(groups.items()):
+        try:
+            pricing_map = sync_pricing_for_endpoint(base_url=base_url, auth_env=auth_env)
+        except Exception as exc:
+            print(f"WARN  pricing sync failed for {base_url}: {exc}")
+            continue
+
+        for path in paths:
+            c = load_connector(path, check_hash=False)
+            info = pricing_map.get(c.endpoint.model_name)
+            if not info:
+                print(f"WARN  {c.id}: no pricing for model_name={c.endpoint.model_name!r}")
+                continue
+            if c.pricing == info.pricing:
+                continue
+            c.pricing = info.pricing
+            c.profile.notes = ((c.profile.notes or "") + f" pricing={info.source}.").strip()
+            dump_connector(c, path)
+            print(
+                f"OK    {c.id}: pricing in={c.pricing.input_per_1k:.6g}/1k "
+                f"out={c.pricing.output_per_1k:.6g}/1k ({info.source})"
+            )
+            updated += 1
+
+    print(f"sync-pricing OK ({updated} connector(s) updated)")
     return 0
 
 
@@ -160,7 +203,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="List or verify installed connector pool")
     parser.add_argument(
         "command",
-        choices=("list", "verify", "sync-lmstudio", "lmstudio-models", "apply", "rehash"),
+        choices=(
+            "list",
+            "verify",
+            "sync-lmstudio",
+            "lmstudio-models",
+            "apply",
+            "rehash",
+            "sync-pricing",
+        ),
     )
     parser.add_argument("--pool", type=Path, default=None)
     parser.add_argument("--base-url", default=DEFAULT_LMSTUDIO_URL)
@@ -197,6 +248,8 @@ def main() -> None:
         raise SystemExit(cmd_apply(pool, curated))
     if args.command == "rehash":
         raise SystemExit(cmd_rehash(pool))
+    if args.command == "sync-pricing":
+        raise SystemExit(cmd_sync_pricing(pool))
     raise SystemExit(cmd_lmstudio_models(args.base_url))
 
 
