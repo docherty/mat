@@ -28,8 +28,8 @@ export ARTIFICIAL_ANALYSIS_API_KEY=...
 mat-sync-aa
 
 # Install connectors from ~/.cache/lm-studio/models (uses AA scrape per model if needed)
-mat-discover-lmstudio
-mat-pool list
+mat-discover-lmstudio   # requires LM Studio up; maps exact /v1/models ids
+mat-pool verify         # fails if a connector model is not served
 
 # Smoke benchmark (needs LM Studio server on :1234)
 mat-benchmark --split val --limit 2 --mode single --connector <id-from-mat-pool-list>
@@ -50,7 +50,7 @@ See [docs/eval-protocol.md](docs/eval-protocol.md) for honest benchmarking rules
 | `mat-discover-lmstudio` | Build connectors from LM Studio downloads + AA |
 | `mat-import-aa <slug>` | Import one model (`--local` for LM Studio) |
 | `mat-calibrate --connector <id>` | Blend live coding pass rate into scores |
-| `mat-pool list` / `verify` | Inspect installed pool |
+| `mat-pool list` / `verify` / `sync-lmstudio` / `lmstudio-models` | Inspect installed pool |
 | `mat-benchmark` | Live HumanEval eval vs single-model baselines |
 | `mat-train-live` | CMA-ES coordinator on train split (live LLMs) |
 | `mat-phase-a` | Simulation generalization spike |

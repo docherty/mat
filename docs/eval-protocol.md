@@ -50,6 +50,9 @@ If lift is under 5pp after pool/prompt iteration, change the pool before more co
 - **Venice $16/day:** reserve for val `compare` runs on API models, not training rollouts
 
 Local workers use `endpoint.type: openai` against LM Studio (`:1234`) or mlx-lm (`:8080`).
+
+**LM Studio:** each connector's `endpoint.model_name` must be an exact id from `GET /v1/models`.
+mat does not substitute models. Run `mat-pool verify` before benchmarking.
 See `connectors/examples/local/README.md`.
 
 ## Commands

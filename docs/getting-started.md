@@ -23,10 +23,11 @@ mat never guesses capability scores. Connectors are built from **Artificial Anal
 export ARTIFICIAL_ANALYSIS_API_KEY=...
 mat-sync-aa
 
-# Scan ~/.cache/lm-studio/models and write connectors
+# Scan ~/.cache/lm-studio/models — requires LM Studio server with models loaded
 mat-discover-lmstudio
 mat-pool list
-mat-pool verify   # optional: ping each endpoint
+mat-pool verify          # each connector model_name must appear in GET /v1/models
+mat-pool lmstudio-models # show what LM Studio currently serves
 ```
 
 Installed YAML files land in **`~/.config/mat/connectors/`**. The repo's `connectors/examples/` directory is boilerplate only.
@@ -37,9 +38,20 @@ Override the pool path:
 export MAT_POOL_DIR=/path/to/connectors
 ```
 
-## 2. Smoke benchmark
+## 2. Multi-model LM Studio (recommended)
 
-Start LM Studio and load one model (e.g. `qwen3.6-35b-a3b`).
+On Apple Silicon, LM Studio can serve **multiple chat models on one endpoint** (`:1234`). Each mat connector stores the **exact** `model_name` from `GET /v1/models`. mat never substitutes a different model.
+
+1. Start the LM Studio server.
+2. Load every model you want in the pool (keep them resident; disable aggressive auto-evict if needed).
+3. Run `mat-pool lmstudio-models` — you should see all target ids.
+4. Run `mat-discover-lmstudio` (or `mat-pool sync-lmstudio` to refresh existing YAMLs).
+
+Orchestrated routing will call `model: "qwen3.6-35b-a3b"` vs `model: "qwen/qwen3.5-9b"` etc. on the same `base_url`.
+
+## 3. Smoke benchmark
+
+Start LM Studio with the models you need loaded.
 
 ```bash
 mat-benchmark --split val --limit 2 --mode single \
@@ -57,7 +69,7 @@ Modes:
 
 See [eval-protocol.md](eval-protocol.md) for train/val splits and the +8pp success gate.
 
-## 3. Train coordinator (optional)
+## 4. Train coordinator (optional)
 
 Training uses the **train** split only (41 HumanEval tasks). Val is held out.
 
@@ -77,7 +89,7 @@ mat-benchmark --split val --mode compare \
   --checkpoint ~/.config/mat/coordinator/latest.json
 ```
 
-## 4. Run the gateway
+## 5. Run the gateway
 
 `mat-serve` exposes an OpenAI-compatible API. By default **`MAT_LIVE=1`** — real LLM calls when a pool is installed.
 
@@ -106,11 +118,11 @@ Quality tiers: `fast`, `balanced`, `max`.
 | `MAT_CHECKPOINT` | `~/.config/mat/coordinator/latest.json` if present | Trained routing weights |
 | `MAT_COORDINATOR` | auto | `prompted` or `trained` |
 | `MAT_GATEWAY_KEY` | `local-dev-key` | Bearer token for `/v1/*` |
-| `MAT_LMSTUDIO_MODEL` | auto from `/v1/models` | Force model id for all local connectors |
+| `MAT_STRICT_LMSTUDIO_MODELS` | `1` | `0` = skip /v1/models validation (tests only) |
 | `MAT_LLM_TIMEOUT` | `300` | Seconds per LLM request |
 | `MAT_HOST` / `MAT_PORT` | `127.0.0.1` / `8080` | Bind address for `mat-serve` |
 
-## 5. Calibrate a connector (optional)
+## 6. Calibrate a connector (optional)
 
 Blend live HumanEval **train** pass rate into the `coding` capability score:
 
@@ -126,7 +138,8 @@ mat-calibrate --connector <id> --limit 10
 | Connection refused on :1234 | Start LM Studio server; load a model |
 | All models show same AA scores | Re-run `mat-discover-lmstudio` after upgrading mat |
 | `mlx_lm.server: command not found` | Use `python -m mlx_lm server` |
-| Slow compare mode | One LM Studio instance = one loaded model; run modes sequentially |
+| Model not served / 400 from LM Studio | Load that model; `mat-pool verify`; `mat-pool sync-lmstudio` |
+| Slow compare mode | Use `--connector` on compare; load all pool models in LM Studio first |
 
 ## Next steps
 

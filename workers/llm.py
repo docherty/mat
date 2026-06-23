@@ -3,15 +3,15 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
-from functools import lru_cache
-from urllib.parse import urlparse
 
 import httpx
 
+from connectors.lmstudio_api import ModelNotServedError, resolve_connector_model
 from connectors.schema import Connector
 
 _CODE_BLOCK_RE = re.compile(r"```(?:python)?\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
-_LMSTUDIO_HOSTS = frozenset({"127.0.0.1", "localhost"})
+
+__all__ = ["CompletionResult", "LLMWorker", "ModelNotServedError", "resolve_model_name"]
 
 
 @dataclass
@@ -27,50 +27,15 @@ class CompletionResult:
         return self.input_tokens + self.output_tokens
 
 
-def _is_lmstudio_url(base_url: str) -> bool:
-    host = urlparse(base_url).hostname or ""
-    return host in _LMSTUDIO_HOSTS
-
-
-@lru_cache(maxsize=16)
-def _lmstudio_model_ids(base_url: str) -> tuple[str, ...]:
-    url = f"{base_url.rstrip('/')}/models"
-    try:
-        with httpx.Client(timeout=10.0) as client:
-            response = client.get(url)
-            response.raise_for_status()
-            data = response.json().get("data") or []
-    except (httpx.HTTPError, KeyError, TypeError, ValueError):
-        return ()
-    return tuple(
-        str(entry["id"])
-        for entry in data
-        if entry.get("id") and entry.get("object") == "model"
-    )
-
-
-def _pick_lmstudio_model(base_url: str, preferred: str) -> str | None:
-    override = os.environ.get("MAT_LMSTUDIO_MODEL", "").strip()
-    if override:
-        return override
-    ids = _lmstudio_model_ids(base_url)
-    if not ids:
-        return None
-    if preferred in ids:
-        return preferred
-    pref = preferred.lower().replace("_", "-")
-    for model_id in ids:
-        if pref in model_id.lower() or model_id.lower() in pref:
-            return model_id
-    return ids[0]
-
-
 def resolve_model_name(connector: Connector) -> str:
-    """Use a model LM Studio actually serves for local OpenAI-compatible endpoints."""
-    if not _is_lmstudio_url(connector.endpoint.base_url):
-        return connector.endpoint.model_name
-    loaded = _pick_lmstudio_model(connector.endpoint.base_url, connector.endpoint.model_name)
-    return loaded or connector.endpoint.model_name
+    """Use the connector's model_name exactly; validate against LM Studio when local."""
+    strict = os.environ.get("MAT_STRICT_LMSTUDIO_MODELS", "1").lower() in ("1", "true", "yes")
+    return resolve_connector_model(
+        connector.id,
+        connector.endpoint.base_url,
+        connector.endpoint.model_name,
+        validate=strict,
+    )
 
 
 class LLMWorker:

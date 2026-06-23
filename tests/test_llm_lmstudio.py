@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
+from connectors.lmstudio_api import ModelNotServedError
 from connectors.schema import Connector
-from workers.llm import _pick_lmstudio_model, resolve_model_name
+from workers.llm import resolve_model_name
 
 
 def _connector(model_name: str) -> Connector:
@@ -43,15 +46,26 @@ def _connector(model_name: str) -> Connector:
     )
 
 
-def test_resolve_model_name_prefers_exact_match(monkeypatch):
+def test_resolve_model_name_uses_connector_exactly(monkeypatch):
     monkeypatch.setattr(
-        "workers.llm._lmstudio_model_ids",
+        "connectors.lmstudio_api.fetch_served_model_ids",
         lambda _url: ("qwen3.6-35b-a3b", "gemma-4-31b-it"),
     )
     conn = _connector("qwen3.6-35b-a3b")
     assert resolve_model_name(conn) == "qwen3.6-35b-a3b"
 
 
-def test_pick_lmstudio_model_env_override(monkeypatch):
-    monkeypatch.setenv("MAT_LMSTUDIO_MODEL", "custom-model")
-    assert _pick_lmstudio_model("http://127.0.0.1:1234/v1", "ignored") == "custom-model"
+def test_resolve_model_name_never_substitutes_other_model(monkeypatch):
+    monkeypatch.setattr(
+        "connectors.lmstudio_api.fetch_served_model_ids",
+        lambda _url: ("qwen3.6-35b-a3b",),
+    )
+    conn = _connector("gemma-4-31b-it")
+    with pytest.raises(ModelNotServedError):
+        resolve_model_name(conn)
+
+
+def test_resolve_model_name_non_lmstudio_skips_validation():
+    conn = _connector("anything")
+    conn.endpoint.base_url = "https://api.openrouter.ai/v1"
+    assert resolve_model_name(conn) == "anything"

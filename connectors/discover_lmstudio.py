@@ -7,7 +7,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from connectors.import_aa import connector_from_aa, find_aa_model_or_fetch, load_aa_cache, slugify
-from connectors.loader import dump_connector
+from connectors.lmstudio_api import (
+    clear_served_model_cache,
+    fetch_served_model_ids,
+    is_lmstudio_url,
+    match_served_model_id,
+)
+from connectors.loader import dump_connector, load_connector
 from connectors.paths import ensure_user_pool_dir
 from connectors.schema import Endpoint
 
@@ -60,11 +66,21 @@ def scan_lmstudio_cache(cache_dir: Path | None = None) -> list[dict]:
     return found
 
 
-def lmstudio_model_name(folder_name: str) -> str:
-    """Best-guess id for LM Studio OpenAI API when this folder is loaded."""
+def lmstudio_model_name_guess(folder_name: str) -> str:
+    """Heuristic id when LM Studio API is unavailable (offline discover only)."""
     base = re.sub(r"-(8bit|4bit|GGUF|MLX.*)$", "", folder_name, flags=re.I)
     if re.search(r"Qwen3\.6-35B-A3B", base, re.I):
         return "qwen3.6-35b-a3b"
+    if re.search(r"Qwen3\.6-27B", base, re.I):
+        return "qwen3.6-27b"
+    if re.search(r"gemma-4-26B", base, re.I):
+        return "gemma-4-26b-a4b-it-mlx"
+    if re.search(r"gemma-4-31B", base, re.I):
+        return "gemma-4-31b-it-qat-optiq"
+    if re.search(r"Qwen3\.5-9B", base, re.I):
+        return "qwen/qwen3.5-9b"
+    if re.search(r"LFM2-24B", base, re.I):
+        return "liquid/lfm2-24b-a2b"
     return slugify(base)
 
 
@@ -75,15 +91,71 @@ def aa_hint_for_folder(folder_name: str) -> str | None:
     return slugify(folder_name.replace("_", "-"))
 
 
+def resolve_model_name_for_entry(
+    entry: dict,
+    served_ids: tuple[str, ...],
+    *,
+    offline: bool,
+) -> str | None:
+    guess = lmstudio_model_name_guess(entry["folder_name"])
+    if served_ids:
+        matched = match_served_model_id(
+            entry["folder_name"],
+            entry["catalog_path"],
+            served_ids,
+            guess=guess,
+        )
+        return matched
+    if offline:
+        return guess
+    return None
+
+
+def sync_pool_lmstudio_names(
+    pool_dir: Path,
+    *,
+    base_url: str = DEFAULT_LMSTUDIO_URL,
+) -> list[tuple[str, str, str]]:
+    """Update connector YAMLs with exact ids from GET /v1/models. Returns (id, old, new)."""
+    if not is_lmstudio_url(base_url):
+        raise ValueError(f"not an LM Studio base URL: {base_url}")
+    clear_served_model_cache()
+    served = fetch_served_model_ids(base_url)
+    if not served:
+        raise RuntimeError(f"LM Studio at {base_url} returned no chat models")
+
+    changes: list[tuple[str, str, str]] = []
+    for path in sorted(pool_dir.glob("*.yaml")):
+        connector = load_connector(path)
+        if not is_lmstudio_url(connector.endpoint.base_url):
+            continue
+        catalog = connector.profile.catalog_id or ""
+        folder = catalog.split("/")[-1] if catalog else path.stem
+        matched = match_served_model_id(
+            folder,
+            catalog,
+            served,
+            guess=connector.endpoint.model_name,
+        )
+        if not matched:
+            continue
+        if matched != connector.endpoint.model_name:
+            old = connector.endpoint.model_name
+            connector.endpoint.model_name = matched
+            dump_connector(connector, path)
+            changes.append((connector.id, old, matched))
+    return changes
+
+
 def install_from_cache(
     *,
     cache_dir: Path | None = None,
     out_dir: Path | None = None,
     base_url: str = DEFAULT_LMSTUDIO_URL,
-    port_offset: int = 0,
     skip_missing_aa: bool = True,
+    offline: bool = False,
 ) -> list[Path]:
-    """Write one connector per cached model with AA benchmark_import scores."""
+    """Write one connector per cached model with AA benchmarks and exact LM Studio model ids."""
     out_dir = out_dir or ensure_user_pool_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
     models = None
@@ -92,7 +164,24 @@ def install_from_cache(
     except ValueError:
         models = []
 
+    served: tuple[str, ...] = ()
+    if is_lmstudio_url(base_url) and not offline:
+        clear_served_model_cache()
+        try:
+            served = fetch_served_model_ids(base_url)
+        except OSError as exc:
+            raise RuntimeError(
+                f"cannot reach LM Studio at {base_url}: {exc}. "
+                "Start the server and load models, or pass --offline."
+            ) from exc
+        if not served:
+            raise RuntimeError(
+                f"LM Studio at {base_url} returned no chat models. "
+                "Load models in LM Studio, then re-run."
+            )
+
     written: list[Path] = []
+    skipped: list[str] = []
     for entry in scan_lmstudio_cache(cache_dir):
         hint = aa_hint_for_folder(entry["folder_name"])
         aa = find_aa_model_or_fetch(hint or entry["folder_name"], models)
@@ -104,9 +193,12 @@ def install_from_cache(
                 f"(hint={hint!r}). Run mat-sync-aa or mat-import-aa <slug>."
             )
 
-        safe_id = slugify(entry["catalog_path"].replace("/", "-"))
-        model_name = lmstudio_model_name(entry["folder_name"])
+        model_name = resolve_model_name_for_entry(entry, served, offline=offline)
+        if not model_name:
+            skipped.append(entry["catalog_path"])
+            continue
 
+        safe_id = slugify(entry["catalog_path"].replace("/", "-"))
         endpoint = Endpoint(
             type="openai",
             base_url=base_url,
@@ -122,8 +214,8 @@ def install_from_cache(
             contributor="mat:discover-lmstudio",
             extra_notes=(
                 f"LM Studio cache: {entry['cache_path']}. "
-                f"Load this folder in LM Studio; set endpoint.model_name to match "
-                f"GET /v1/models if needed."
+                f"API model id: {model_name!r} (from GET /v1/models). "
+                f"Load this model in LM Studio for routing to succeed."
             ),
         )
         connector.display_name = f"{connector.display_name} (local)"
@@ -135,6 +227,12 @@ def install_from_cache(
         dump_connector(connector, out_path)
         written.append(out_path)
 
+    if skipped:
+        print(
+            "skipped (not listed by LM Studio /v1/models — load them first):",
+            *skipped,
+            sep="\n  ",
+        )
     return written
 
 
@@ -148,12 +246,18 @@ def main() -> None:
     parser.add_argument("--out", type=Path, help="default: ~/.config/mat/connectors")
     parser.add_argument("--base-url", default=DEFAULT_LMSTUDIO_URL)
     parser.add_argument("--strict-aa", action="store_true", help="fail if any model lacks AA data")
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="do not call LM Studio; use heuristic model names (run mat-pool sync-lmstudio later)",
+    )
     args = parser.parse_args()
     paths = install_from_cache(
         cache_dir=args.cache,
         out_dir=args.out,
         base_url=args.base_url,
         skip_missing_aa=not args.strict_aa,
+        offline=args.offline,
     )
     for p in paths:
         print(p)

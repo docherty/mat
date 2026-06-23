@@ -14,7 +14,7 @@ mat-sync-aa
 mat-discover-lmstudio
 ```
 
-This scans `~/.cache/lm-studio/models`, matches each download to Artificial Analysis benchmarks, and writes **benchmark_import** connectors (not hand guesses).
+This scans `~/.cache/lm-studio/models`, matches each download to Artificial Analysis benchmarks, and writes **benchmark_import** connectors with **exact LM Studio model ids** from `GET /v1/models` (server must be running with models loaded).
 
 ## Single model
 
