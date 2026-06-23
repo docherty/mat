@@ -36,6 +36,10 @@ mat-discover-lmstudio   # requires LM Studio up; maps exact /v1/models ids
 mat-pool sync-lmstudio  # align connector model_name to LM Studio /v1/models
 mat-pool verify         # fails if a connector model is not served
 
+# Optional: add Venice models (API; put VENICE_API_KEY in .env)
+mat-import-aa deepseek-v4-flash --base-url https://api.venice.ai/api/v1 --model-name deepseek-v4-flash --auth-env VENICE_API_KEY --connector-id deepseek-v4-flash@venice
+mat-import-aa mimo-v2-5-0424 --base-url https://api.venice.ai/api/v1 --model-name xiaomi-mimo-v2-5 --auth-env VENICE_API_KEY --connector-id xiaomi-mimo-v2-5@venice
+
 # Smoke benchmark (needs LM Studio server on :1234)
 mat-benchmark --split val --limit 2 --mode single --connector <id-from-mat-pool-list>
 

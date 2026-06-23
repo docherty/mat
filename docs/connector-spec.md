@@ -40,7 +40,7 @@ endpoint:
 
 context_window: 1048576
 max_output_tokens: 65536
-modalities: [text]
+modalities: [text]          # input modalities: text | image | audio | video (router filters incompatibles)
 locality: api               # api | local
 
 pricing:                    # used by cost-aware fitness / routing

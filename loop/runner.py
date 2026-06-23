@@ -11,6 +11,7 @@ from eval.live_loop import LiveCodingLoop, LiveLoopConfig, RoleCoordinator
 from eval.oracle import Task, run_oracle
 from loop.coding_detect import extract_coding_prompt, guess_entry_point, is_coding_request
 from loop.difficulty import assess_difficulty, step_budget_for_tier
+from loop.modality import compatible_pool, required_modalities
 from workers.llm import LLMWorker
 
 
@@ -66,6 +67,20 @@ class OrchestrationLoop:
         return self._run_simulated(messages, coding_task=coding_task)
 
     def _run_live(self, messages: list[dict], *, coding_task: dict | None) -> LoopResult:
+        req_mod = required_modalities(messages)
+        pool = compatible_pool(self.pool, required=req_mod)
+        if not pool:
+            return LoopResult(
+                answer=(
+                    f"(no connector supports modalities={sorted(req_mod)}; "
+                    "check connector.modalities)"
+                ),
+                passed=False,
+                steps=0,
+                connector_id=self.pool[0].id if self.pool else "(none)",
+                stages=["no_compatible_connector"],
+            )
+
         # Non-coding chat should behave like a normal OpenAI gateway: route once, then passthrough.
         if coding_task is None and not is_coding_request(messages):
             difficulty = assess_difficulty(messages)
@@ -77,7 +92,7 @@ class OrchestrationLoop:
                 required_tags={"instruction_following": 1.0},
                 entry_point=None,
             )
-            conn = self._role_coordinator.pick(task, self.pool, role="worker")
+            conn = self._role_coordinator.pick(task, pool, role="worker")
             completion = self.worker.complete(conn, messages)
             return LoopResult(
                 answer=completion.text,
@@ -97,7 +112,7 @@ class OrchestrationLoop:
             skip_oracle=coding_task is None,
         )
         live = LiveCodingLoop(
-            self.pool,
+            pool,
             self._role_coordinator,
             worker=self.worker,
             config=config,

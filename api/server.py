@@ -19,7 +19,8 @@ QUALITY_TIERS = ("fast", "balanced", "max")
 
 class ChatMessage(BaseModel):
     role: str
-    content: str | None = None
+    # OpenAI-compatible: content can be a string or an array of content parts (e.g. image_url).
+    content: Any | None = None
 
 
 class ChatRequest(BaseModel):

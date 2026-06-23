@@ -29,7 +29,9 @@ mat-sync-aa
 
 # Curated local pool (3 models — recommended for routing dev)
 mat-discover-lmstudio --curated connectors/curated/local-dev-pool.yaml
-mat-pool apply --curated connectors/curated/local-dev-pool.yaml --keep deepseek-v4-flash@venice
+mat-pool apply --curated connectors/curated/local-dev-pool.yaml \
+  --keep deepseek-v4-flash@venice \
+  --keep xiaomi-mimo-v2-5@venice
 mat-pool list
 mat-pool verify
 ```
@@ -83,6 +85,16 @@ mat-import-aa deepseek-v4-flash \
   --model-name deepseek-v4-flash \
   --auth-env VENICE_API_KEY \
   --connector-id deepseek-v4-flash@venice
+```
+
+To add a **vision-capable** Venice model (image input), install MiMo-V2.5:
+
+```bash
+mat-import-aa mimo-v2-5-0424 \
+  --base-url https://api.venice.ai/api/v1 \
+  --model-name xiaomi-mimo-v2-5 \
+  --auth-env VENICE_API_KEY \
+  --connector-id xiaomi-mimo-v2-5@venice
 ```
 
 Then re-run `mat-pool list` and `mat-pool verify`.
