@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import warnings
 from pathlib import Path
 
-import cma
-import numpy as np
+warnings.filterwarnings("ignore", category=UserWarning, module=r"cma\.s")
 
-from connectors.loader import load_connectors_dir
-from connectors.paths import default_pool_dir
-from coordinator.checkpoint import save_checkpoint
-from coordinator.policy import TrainedCoordinator
-from coordinator.train import _heuristic_weights
-from eval.live_loop import LiveCodingLoop, RoleCoordinator
-from eval.oracle import load_tasks
-from workers.mock import MockLLMWorker
+import cma  # noqa: E402
+import numpy as np  # noqa: E402
+
+from connectors.loader import load_connectors_dir  # noqa: E402
+from connectors.paths import default_pool_dir  # noqa: E402
+from coordinator.checkpoint import save_checkpoint  # noqa: E402
+from coordinator.policy import TrainedCoordinator  # noqa: E402
+from coordinator.train import _heuristic_weights  # noqa: E402
+from eval.live_loop import LiveCodingLoop, RoleCoordinator  # noqa: E402
+from eval.oracle import load_tasks  # noqa: E402
+from workers.mock import MockLLMWorker  # noqa: E402
 
 
 def train_live(
@@ -71,9 +74,6 @@ def train_live(
 
 
 def main() -> None:
-    import warnings
-
-    warnings.filterwarnings("ignore", message="Could not import matplotlib.pyplot")
     parser = argparse.ArgumentParser(description="Live CMA-ES on HumanEval train split only")
     parser.add_argument("--pool", type=Path, default=None)
     parser.add_argument("--tasks", type=int, default=5, help="train tasks per fitness eval")
