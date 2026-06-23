@@ -131,22 +131,18 @@ mat-benchmark --split val --mode compare \
   --checkpoint ~/.config/mat/coordinator/latest.json
 ```
 
-## 5. Run the gateway
-
-`mat-serve` exposes an OpenAI-compatible API. By default **`MAT_LIVE=1`** — real LLM calls when a pool is installed.
-
-In a **second terminal**, run the live dashboard:
+## 5. Run mat
 
 ```bash
-mat-dashboard
+mat
 ```
 
-Shows active pool, LM Studio served status, recent routing decisions, and request metrics.
+Starts the OpenAI-compatible gateway **and** the live dashboard (pool health, routing decisions, metrics). Use `mat --no-tui` for headless gateway only.
 
 ```bash
 export MAT_GATEWAY_KEY=local-dev-key
 export MAT_CHECKPOINT=~/.config/mat/coordinator/latest.json   # optional
-mat-serve
+mat
 ```
 
 ```bash

@@ -40,6 +40,7 @@ slm = [
 ]
 
 [project.scripts]
+mat = "api.cli:main"
 mat-profile = "probe_set.cli:main"
 mat-serve = "api.server:main"
 mat-phase-a = "eval.phase_a:main"

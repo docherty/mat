@@ -30,12 +30,21 @@ def default_active_manifest() -> Path:
 
 
 def load_active_ids(path: Path) -> list[str]:
+    ids, _ = load_active_manifest(path)
+    return ids
+
+
+def load_active_manifest(path: Path) -> tuple[list[str], str | None]:
     data = yaml.safe_load(path.read_text())
+    primary: str | None = None
     if isinstance(data, list):
-        return [str(x) for x in data]
+        return [str(x) for x in data], None
     if isinstance(data, dict):
         raw = data.get("connectors") or data.get("ids") or []
-        return [str(x) for x in raw]
+        primary = data.get("local_primary")
+        if primary is not None:
+            primary = str(primary).strip() or None
+        return [str(x) for x in raw], primary
     raise ValueError(f"invalid active manifest: {path}")
 
 
@@ -66,7 +75,7 @@ def index_library(connectors_dir: Path) -> dict[str, Path]:
 
 
 def load_active_pool(*, library_dir: Path, manifest: Path) -> PoolResolution:
-    ids = load_active_ids(manifest)
+    ids, local_primary = load_active_manifest(manifest)
     index = index_library(library_dir)
     missing = [cid for cid in ids if cid not in index]
     if missing:
@@ -75,6 +84,12 @@ def load_active_pool(*, library_dir: Path, manifest: Path) -> PoolResolution:
             f"Looked in library {library_dir}."
         )
     pool = [load_connector(index[cid]) for cid in ids]
+    if local_primary and local_primary not in {c.id for c in pool}:
+        raise ValueError(
+            f"active manifest local_primary {local_primary!r} is not in connectors list"
+        )
+    if local_primary:
+        os.environ.setdefault("MAT_LOCAL_PRIMARY", local_primary)
     return PoolResolution(
         pool=pool,
         source="active_manifest",

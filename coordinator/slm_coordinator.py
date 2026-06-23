@@ -61,24 +61,24 @@ class SLMCoordinator:
         hidden = out.hidden_states[-1][0, -1].float().cpu().numpy()
         return hidden
 
-    def _features(self, task: Task, connector: Connector, role: str) -> np.ndarray:
+    def _features(self, task: Task, connector: Connector, role: str, *, transcript: str = "") -> np.ndarray:
         role_oh = np.zeros(self._n_roles)
         if role in ROLES:
             role_oh[ROLES.index(role)] = 1.0
-        text = f"task difficulty {task.difficulty:.2f} role {role} tags {task.required_tags}"
+        text = f"task difficulty {task.difficulty:.2f} role {role} tags {task.required_tags}\n{transcript}"
         emb = self._encode_text(text)
         cap = np.array(connector.capability_vector())
         # truncate/pad embedding to fixed width for head
         emb = emb[:32] if len(emb) > 32 else np.pad(emb, (0, max(0, 32 - len(emb))))
         return np.concatenate([emb, cap, role_oh, [task.difficulty]])
 
-    def score(self, task: Task, connector: Connector, *, role: str) -> float:
-        x = self._features(task, connector, role)
+    def score(self, task: Task, connector: Connector, *, role: str, transcript: str = "") -> float:
+        x = self._features(task, connector, role, transcript=transcript)
         w = self.head_weights[: len(x)]
         return float(np.dot(w, x[: len(w)]))
 
-    def pick(self, task: Task, pool: list[Connector], *, role: str) -> Connector:
-        scores = [self.score(task, c, role=role) for c in pool]
+    def pick(self, task: Task, pool: list[Connector], *, role: str, transcript: str = "") -> Connector:
+        scores = [self.score(task, c, role=role, transcript=transcript) for c in pool]
         return pool[int(np.argmax(scores))]
 
     @classmethod

@@ -122,7 +122,7 @@ def build_layout(*, gateway: dict | None, local_health: dict, pool_source: str) 
     else:
         parts.append(
             Text(
-                f"Gateway not reachable at {_gateway_base()} — start mat-serve for live metrics",
+                f"Waiting for gateway at {_gateway_base()}…",
                 style="dim italic",
             )
         )
@@ -130,14 +130,9 @@ def build_layout(*, gateway: dict | None, local_health: dict, pool_source: str) 
     return Panel(Group(*parts), title="mat", border_style="blue")
 
 
-def main() -> None:
-    load_env()
-    parser = argparse.ArgumentParser(description="Live mat pool + routing dashboard")
-    parser.add_argument("--interval", type=float, default=2.0, help="refresh seconds")
-    args = parser.parse_args()
-
+def run_dashboard(*, interval: float = 2.0) -> None:
+    """Blocking live dashboard loop."""
     console = Console()
-
     try:
         with Live(console=console, refresh_per_second=4, screen=True) as live:
             while True:
@@ -157,9 +152,17 @@ def main() -> None:
                     )
                 except (OSError, ValueError) as exc:
                     live.update(Panel(str(exc), title="mat error", border_style="red"))
-                time.sleep(args.interval)
+                time.sleep(interval)
     except KeyboardInterrupt:
-        console.print("\n[dim]dashboard stopped[/dim]")
+        console.print("\n[dim]mat stopped[/dim]")
+
+
+def main() -> None:
+    load_env()
+    parser = argparse.ArgumentParser(description="Live mat pool + routing dashboard")
+    parser.add_argument("--interval", type=float, default=2.0, help="refresh seconds")
+    args = parser.parse_args()
+    run_dashboard(interval=args.interval)
 
 
 if __name__ == "__main__":

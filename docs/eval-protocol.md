@@ -38,6 +38,10 @@ Report all of these — not just pass@1:
 
 If lift is under 5pp after pool/prompt iteration, change the pool before more coordinator tuning.
 
+See `docs/trinity-alignment.md` for the gap vs [Trinity](https://arxiv.org/abs/2512.04695) and the recommended fix order.
+
+Compare reports also include **`per_question_best_pass_at_1`** (union over single baselines) and **`gap_to_union`**.
+
 ## What we do not report as achievements
 
 - pass@1 on train split
@@ -59,11 +63,20 @@ See `connectors/examples/local/README.md`.
 ## Commands
 
 ```bash
-# Smoke (installed pool, 2 val tasks)
-mat-benchmark --split val --limit 2
+# Union ceiling (single shot per pool member; no orchestration)
+mat-benchmark --split val --mode union --out traces/val_union.json
 
-# Full honest comparison
-mat-benchmark --split val --mode compare --out traces/benchmark_val.json
+# Full honest comparison (requires trained checkpoint for orchestrated)
+mat-benchmark --split val --mode compare \
+  --connector deepseek-v4-flash@venice \
+  --checkpoint ~/.config/mat/coordinator/latest.json \
+  --out traces/val_compare.json
+
+# Train coordinator (train split only)
+mat-train-live --tasks 10 --generations 8 --population 8 \
+  --checkpoint ~/.config/mat/coordinator/latest.json
 ```
 
-Pool defaults to `~/.config/mat/connectors/`. See `connectors/examples/local/README.md`.
+`orchestrated` / `compare` refuse an untrained (heuristic-only) checkpoint unless `--allow-untrained-checkpoint`.
+
+Pool defaults to `active.yaml` + `connectors/library/`. See [trinity-progress.md](./trinity-progress.md).

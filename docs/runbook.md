@@ -4,18 +4,9 @@
 
 ```bash
 cd mat
-cp .env.example .env   # once
-# edit .env — at minimum MAT_GATEWAY_KEY and API keys
-
-# LM Studio: start server, load all models in active.yaml
-mat-pool verify
-mat-serve
-```
-
-In a second terminal:
-
-```bash
-mat-dashboard
+cp .env.example .env   # once — edit MAT_GATEWAY_KEY and API keys
+mat                    # gateway + dashboard (default)
+# mat --no-tui         # headless gateway only
 ```
 
 ## Active pool

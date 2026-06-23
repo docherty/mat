@@ -44,35 +44,36 @@ mat-import-aa mimo-v2-5-0424 --base-url https://api.venice.ai/api/v1 --model-nam
 # Smoke benchmark (needs LM Studio server on :1234)
 mat-benchmark --split val --limit 2 --mode single --connector <id-from-mat-pool-list>
 
-# OpenAI-compatible gateway (MAT_LIVE=1 by default)
-export MAT_GATEWAY_KEY=local-dev-key
-mat-serve
+# Default: gateway + live dashboard
+mat
+# mat --no-tui   # gateway only
 ```
+
+**Trinity alignment (orchestration lift):** see [docs/trinity-progress.md](docs/trinity-progress.md) for the live plan, status, and long-run commands (`tail -f traces/*.log` for progress).
 
 For a one-command local dev loop (pool sync + smoke benchmarks), see `bash scripts/dev-loop.sh`.
 
 Installed connectors live in **`connectors/library/`** with the active set in **`active.yaml`**. See [docs/runbook.md](docs/runbook.md).
 
 ```bash
-mat-serve       # OpenAI-compatible gateway
-mat-dashboard   # live pool + routing TUI (run beside mat-serve)
+mat                 # gateway + dashboard (default)
+mat --no-tui        # gateway only
 ```
 
 ## Commands
 
 | Command | Purpose |
 |---------|---------|
+| **`mat`** | **Default:** gateway + live dashboard (`--no-tui` = gateway only) |
 | `mat-sync-aa` | Cache Artificial Analysis model catalog |
 | `mat-discover-lmstudio` | Build connectors from LM Studio downloads + AA |
 | `mat-import-aa <slug>` | Import one model (`--local` for LM Studio) |
 | `mat-calibrate --connector <id>` | Blend live coding pass rate into scores |
 | `mat-pool list` / `verify` / `sync-lmstudio` / `lmstudio-models` / `rehash` / `apply` / `sync-pricing` | Manage library + active pool |
 | `mat-migrate-pool` | Copy legacy ~/.config/mat/connectors into library |
-| `mat-dashboard` | Live TUI: pool health, recent routing decisions |
 | `mat-benchmark` | Live HumanEval eval vs single-model baselines |
 | `mat-train-live` | CMA-ES coordinator on train split (live LLMs) |
 | `mat-phase-a` | Simulation generalization spike |
-| `mat-serve` | OpenAI-compatible gateway |
 
 ## Training workflow
 

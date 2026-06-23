@@ -79,8 +79,12 @@ def connector_score(task: Task, connector: Connector) -> float:
     base = score / total_w
     eff = connector.speed.token_efficiency
     if eff is not None:
-        # Mild preference for concise models when capability is similar (±5% band).
         base *= 0.85 + 0.15 * eff
+    # Prefer free local models unless API is clearly stronger on capability fit.
+    if connector.locality == "local":
+        base += 0.04
+    elif connector.pricing and connector.pricing.output_per_1k > 0:
+        base -= min(0.12, connector.pricing.output_per_1k * 80.0)
     return base
 
 

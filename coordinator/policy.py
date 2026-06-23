@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from connectors.schema import Connector
-from eval.harness import best_connector_for_task
+from eval.harness import best_connector_for_task, connector_score
 from eval.oracle import Task
 
 
@@ -16,7 +16,7 @@ def softmax(x: np.ndarray) -> np.ndarray:
 class PromptedCoordinator:
     """Rule-based baseline: pick highest weighted capability score per task."""
 
-    def pick(self, task: Task, pool: list[Connector]) -> Connector:
+    def pick(self, task: Task, pool: list[Connector], *, transcript: str = "") -> Connector:
         return best_connector_for_task(task, pool)
 
 
@@ -36,23 +36,30 @@ class TrainedCoordinator:
     def dim(self) -> int:
         return self.n_task_features + self.n_cap
 
-    def _features(self, task: Task, connector: Connector) -> np.ndarray:
+    def _features(self, task: Task, connector: Connector, *, transcript: str = "") -> np.ndarray:
         from coordinator.features import encode_task
 
-        return np.concatenate(
-            [np.array(encode_task(task), dtype=float), np.array(connector.capability_vector())]
-        )
+        base = np.array(encode_task(task), dtype=float)
+        # Trinity conditions on conversation length / failure signals, not only static task stats.
+        base[1] = min(1.0, (len(task.prompt) + len(transcript)) / 2000.0)
+        if "REVISE" in transcript.upper():
+            base[2] = min(3.0, base[2] + 1.0)
+        return np.concatenate([base, np.array(connector.capability_vector())])
 
-    def score(self, task: Task, connector: Connector) -> float:
-        x = self._features(task, connector)
+    def score(self, task: Task, connector: Connector, *, transcript: str = "") -> float:
+        # Task-weighted capability fit (same signal as harness routing) plus a small
+        # learned residual so CMA can nudge without overriding tag fit entirely.
+        base = connector_score(task, connector)
+        x = self._features(task, connector, transcript=transcript)
         w = self.weights[: len(x)]
-        return float(np.dot(w, x[: len(w)]))
+        residual = float(np.dot(w, x[: len(w)]))
+        return base + 0.05 * residual
 
-    def route_scores(self, task: Task, pool: list[Connector]) -> np.ndarray:
-        return np.array([self.score(task, c) for c in pool])
+    def route_scores(self, task: Task, pool: list[Connector], *, transcript: str = "") -> np.ndarray:
+        return np.array([self.score(task, c, transcript=transcript) for c in pool])
 
-    def pick(self, task: Task, pool: list[Connector]) -> Connector:
-        scores = self.route_scores(task, pool)
+    def pick(self, task: Task, pool: list[Connector], *, transcript: str = "") -> Connector:
+        scores = self.route_scores(task, pool, transcript=transcript)
         return pool[int(np.argmax(scores))]
 
     def routing_accuracy(self, tasks: list[Task], pool: list[Connector]) -> float:

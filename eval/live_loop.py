@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from connectors.local_affinity import apply_local_pin, resolve_local_pins, routing_pool
 from connectors.schema import Connector
 from coordinator.policy import PromptedCoordinator, TrainedCoordinator
 from eval.coding import (
@@ -22,6 +23,7 @@ class Coordinator(Protocol):
         pool: list[Connector],
         *,
         role: str,
+        transcript: str = "",
     ) -> Connector: ...
 
 
@@ -31,6 +33,11 @@ class LiveLoopConfig:
     revision_cap: int = 2
     use_thinker: bool = True
     skip_oracle: bool = False
+
+
+def trinity_loop_config(*, use_thinker: bool = True) -> LiveLoopConfig:
+    """Match Trinity turn budget (5) for fair compare baselines."""
+    return LiveLoopConfig(max_turns=5, revision_cap=5, use_thinker=use_thinker)
 
 
 @dataclass
@@ -60,8 +67,19 @@ class RoleCoordinator:
 
     def __init__(self, base: PromptedCoordinator | TrainedCoordinator | None = None):
         self.base = base or PromptedCoordinator()
+        self._local_pins: dict = {}
 
-    def pick(self, task: Task, pool: list[Connector], *, role: str) -> Connector:
+    def bind_pool(self, pool: list[Connector]) -> None:
+        self._local_pins = resolve_local_pins(pool)
+
+    def pick(
+        self,
+        task: Task,
+        pool: list[Connector],
+        *,
+        role: str,
+        transcript: str = "",
+    ) -> Connector:
         boosted = Task(
             id=task.id,
             prompt=task.prompt,
@@ -72,7 +90,13 @@ class RoleCoordinator:
             entry_point=task.entry_point,
             split=task.split,
         )
-        return self.base.pick(boosted, pool)
+        from coordinator.slm_coordinator import SLMCoordinator
+
+        if isinstance(self.base, SLMCoordinator):
+            choice = self.base.pick(boosted, pool, role=role, transcript=transcript)
+        else:
+            choice = self.base.pick(boosted, pool, transcript=transcript)
+        return apply_local_pin(choice, self._local_pins)
 
 
 def _boost_tags(base: dict[str, float], boosts: dict[str, float]) -> dict[str, float]:
@@ -93,8 +117,14 @@ class LiveCodingLoop:
         worker: LLMWorker | None = None,
         config: LiveLoopConfig | None = None,
     ):
-        self.pool = pool
-        self.coordinator = coordinator or RoleCoordinator()
+        self.pool = routing_pool(pool)
+        if isinstance(coordinator, RoleCoordinator):
+            self.coordinator = coordinator
+            self.coordinator.bind_pool(self.pool)
+        else:
+            role_coord = RoleCoordinator(coordinator)
+            role_coord.bind_pool(self.pool)
+            self.coordinator = role_coord
         self.worker = worker or LLMWorker()
         self.config = config or LiveLoopConfig()
 
@@ -114,11 +144,22 @@ class LiveCodingLoop:
         )
 
     def run_orchestrated(self, task: Task) -> LiveLoopResult:
+        transcript_parts: list[str] = []
+
+        def pick_role(role: str) -> Connector:
+            return self.coordinator.pick(
+                task,
+                self.pool,
+                role=role,
+                transcript="\n\n".join(transcript_parts),
+            )
+
         return self._run_roles(
             task,
-            lambda role: self.coordinator.pick(task, self.pool, role=role),
+            pick_role,
             stages=["orchestrated"],
             force_sequence=self.config.use_thinker,
+            transcript_parts=transcript_parts,
         )
 
     def _run_roles(
@@ -128,9 +169,11 @@ class LiveCodingLoop:
         *,
         stages: list[str],
         force_sequence: bool = True,
+        transcript_parts: list[str] | None = None,
     ) -> LiveLoopResult:
         turns: list[TurnRecord] = []
-        transcript_parts: list[str] = []
+        if transcript_parts is None:
+            transcript_parts = []
         draft_code = ""
         revisions = 0
         input_tokens = 0
@@ -151,7 +194,25 @@ class LiveCodingLoop:
                 turn.completion.output_tokens,
             )
 
+        def at_turn_budget() -> bool:
+            return len(turns) >= self.config.max_turns
+
         if force_sequence and self.config.use_thinker:
+            if at_turn_budget():
+                return LiveLoopResult(
+                    task_id=task.id,
+                    passed=False,
+                    code=draft_code,
+                    turns=turns,
+                    steps=len(turns),
+                    revisions=revisions,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    estimated_cost_usd=cost,
+                    connector_ids=connector_ids,
+                    stages=stages_log + ["turn_budget"],
+                    error="max turns exceeded before work",
+                )
             thinker = pick("thinker")
             turn, plan = call_role(self.worker, thinker, task, "thinker")
             record(turn, thinker)
@@ -159,6 +220,8 @@ class LiveCodingLoop:
             stages_log.append("think")
 
         while revisions <= self.config.revision_cap:
+            if at_turn_budget():
+                break
             worker_conn = pick("worker")
             turn, draft_code = call_role(
                 self.worker,
@@ -203,6 +266,8 @@ class LiveCodingLoop:
                 )
 
             verifier = pick("verifier")
+            if at_turn_budget():
+                break
             turn, verdict_text = call_role(
                 self.worker,
                 verifier,

@@ -4,6 +4,7 @@ import os
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
+from connectors.local_affinity import routing_pool
 from connectors.schema import Connector
 from coordinator.factory import load_role_coordinator
 from coordinator.policy import PromptedCoordinator, TrainedCoordinator
@@ -44,13 +45,15 @@ class OrchestrationLoop:
         live: bool | None = None,
         worker: LLMWorker | None = None,
     ):
-        self.pool = pool
+        self.pool = routing_pool(pool)
         if isinstance(coordinator, RoleCoordinator):
             self._role_coordinator = coordinator
+            self._role_coordinator.bind_pool(self.pool)
             self.coordinator = coordinator.base
         else:
             self.coordinator = coordinator or PromptedCoordinator()
             self._role_coordinator = RoleCoordinator(self.coordinator)
+            self._role_coordinator.bind_pool(self.pool)
         self.quality_tier = quality_tier
         self.revision_cap = revision_cap
         self.live = live_enabled() if live is None else live

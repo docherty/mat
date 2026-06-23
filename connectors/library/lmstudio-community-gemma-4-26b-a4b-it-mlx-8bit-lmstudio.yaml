@@ -24,8 +24,8 @@ capabilities:
     score: 0.791919191919192
     tier: strong
   coding:
-    score: 0.39316306006380897
-    tier: weak
+    score: 0.6965815300319045
+    tier: strong
   long_context:
     score: 0.5
     tier: mid
@@ -39,10 +39,10 @@ capabilities:
     score: 0.5
     tier: mid
 speed:
-  tier: medium
+  tier: fast
   tokens_per_sec: null
-  median_output_tokens: null
-  token_efficiency: null
+  median_output_tokens: 244.0
+  token_efficiency: 1.0
 benchmarks:
 - source: artificial_analysis
   metric: intelligence_index_v4.1
@@ -65,6 +65,20 @@ benchmarks:
   as_of: '2026-06-23'
   url: https://artificialanalysis.ai/models/gemma-4-26b-a4b
   notes: null
+- source: mat_calibration
+  metric: humaneval_worker_pass_rate
+  value: 1.0
+  unit: ratio
+  as_of: '2026-06-23'
+  url: null
+  notes: blended into coding score at weight 0.5; n=3 tasks
+- source: mat_calibration
+  metric: humaneval_worker_median_output_tokens
+  value: 244.0
+  unit: tokens
+  as_of: '2026-06-23'
+  url: null
+  notes: token_efficiency=1.000 vs ref=1000.0
 profile:
   profile_method: benchmark_import
   catalog: lmstudio
@@ -72,8 +86,9 @@ profile:
   probe_suite_version: null
   profiled_at: '2026-06-23T07:13:33.286820Z'
   contributor: mat:discover-lmstudio
-  integrity_sha256: a67c75d4e3008981bd27d8501c12ce9b802bd43ba1efcb24e034aa10a12ed702
-  notes: 'Capability scores from Artificial Analysis benchmark import. AA slug: gemma-4-26b-a4b.
-    LM Studio cache: /Users/jmd/.cache/lm-studio/models/lmstudio-community/gemma-4-26B-A4B-it-MLX-8bit.
-    Load this folder in LM Studio; set endpoint.model_name to match GET /v1/models
-    if needed.'
+  integrity_sha256: 175d50f1e2fe585ac2e732324a26caa64fb36af3146e325d134f3caf7611b147
+  notes: "Capability scores from Artificial Analysis benchmark import. AA slug: gemma-4-26b-a4b.\
+    \ LM Studio cache: /Users/jmd/.cache/lm-studio/models/lmstudio-community/gemma-4-26B-A4B-it-MLX-8bit.\
+    \ Load this folder in LM Studio; set endpoint.model_name to match GET /v1/models\
+    \ if needed. Calibrated 2026-06-23: coding 0.393\u21920.697 (pass@1=1.000); median_output_tokens=244\
+    \ token_efficiency=1.000."

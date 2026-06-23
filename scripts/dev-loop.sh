@@ -31,4 +31,4 @@ mat-benchmark --split val --limit 3 --mode compare \
   --out traces/compare_val3.json || true
 
 echo
-echo "Done. Start: mat-serve  |  mat-dashboard"
+echo "Done. Start: mat"

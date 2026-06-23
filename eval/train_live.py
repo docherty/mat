@@ -30,6 +30,7 @@ def train_live(
     population: int = 8,
     seed: int = 42,
     mock: bool = False,
+    replicates: int = 1,
 ) -> dict:
     pool = resolve_pool(pool_dir=pool_dir).pool if pool_dir is not None else resolve_pool().pool
     train_path = Path(__file__).parent / "tasks" / "humaneval_train.json"
@@ -37,29 +38,54 @@ def train_live(
         raise FileNotFoundError("run: python -m eval.datasets.build_humaneval_split")
     tasks = load_tasks(train_path, split="train")[:task_limit]
     worker = MockLLMWorker() if mock else None
+    print(
+        f"train-live: {len(tasks)} tasks × pop {population} × {generations} gens "
+        f"({len(pool)} connectors)",
+        flush=True,
+    )
+
+    eval_count = 0
 
     def fitness(flat: list[float]) -> float:
+        nonlocal eval_count
+        eval_count += 1
         coord = TrainedCoordinator(np.array(flat))
         role_coord = RoleCoordinator(coord)
         scored_loop = LiveCodingLoop(pool, role_coord, worker=worker)
-        passed = 0
-        cost = 0.0
-        tokens = 0
-        for task in tasks:
-            result = scored_loop.run_orchestrated(task)
-            passed += int(result.passed)
-            cost += result.estimated_cost_usd
-            tokens += result.output_tokens
-        n = len(tasks) or 1
-        return passed / n - 0.001 * cost - 1e-6 * (tokens / n)
+        scores: list[float] = []
+        for _rep in range(max(1, replicates)):
+            passed = 0
+            cost = 0.0
+            tokens = 0
+            for task in tasks:
+                result = scored_loop.run_orchestrated(task)
+                passed += int(result.passed)
+                cost += result.estimated_cost_usd
+                tokens += result.output_tokens
+            n = len(tasks) or 1
+            scores.append(passed / n - 0.001 * cost - 1e-6 * (tokens / n))
+        score = sum(scores) / len(scores)
+        print(
+            f"train-live eval {eval_count} pass@{len(tasks)}={scores[0]:.2f}"
+            + (f" (mean of {len(scores)} reps)" if len(scores) > 1 else ""),
+            flush=True,
+        )
+        return score
 
     x0 = _heuristic_weights()
     opts = cma.CMAOptions()
     opts.set("popsize", population)
     opts.set("verbose", -9)
     opts.set("seed", seed)
+    opts.set("CMA_diagonal", True)  # sep-CMA-ES — matches Trinity for high-dim heads
     es = cma.CMAEvolutionStrategy(x0, 0.3, opts)
-    es.optimize(fitness, iterations=generations)
+
+    def _progress(_: cma.CMAEvolutionStrategy) -> None:
+        gen = es.countiter
+        best = float(es.result.fbest) if es.result.fbest is not None else float("nan")
+        print(f"train-live gen {gen}/{generations} best_fitness={best:.4f}", flush=True)
+
+    es.optimize(fitness, iterations=generations, callback=_progress)
     best = TrainedCoordinator(np.array(es.result.xbest))
 
     eval_loop = LiveCodingLoop(pool, RoleCoordinator(best), worker=worker)
@@ -79,13 +105,14 @@ def main() -> None:
     load_env()
     parser = argparse.ArgumentParser(description="Live CMA-ES on HumanEval train split only")
     parser.add_argument("--pool", type=Path, default=None)
-    parser.add_argument("--tasks", type=int, default=5, help="train tasks per fitness eval")
-    parser.add_argument("--generations", type=int, default=8)
-    parser.add_argument("--population", type=int, default=8)
+    parser.add_argument("--tasks", type=int, default=10, help="train tasks per fitness eval")
+    parser.add_argument("--generations", type=int, default=12)
+    parser.add_argument("--population", type=int, default=12)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--mock", action="store_true", help="use MockLLMWorker (no API calls)")
     parser.add_argument("--out", type=Path, help="write coordinator checkpoint JSON")
     parser.add_argument("--checkpoint", type=Path, help="alias for --out")
+    parser.add_argument("--replicates", type=int, default=1, help="fitness replicates per candidate (Trinity uses ~16)")
     args = parser.parse_args()
     out_path = args.checkpoint or args.out
     result = train_live(
@@ -95,6 +122,7 @@ def main() -> None:
         population=args.population,
         seed=args.seed,
         mock=args.mock,
+        replicates=args.replicates,
     )
     serializable = {k: v for k, v in result.items() if k != "coordinator"}
     print(json.dumps(serializable, indent=2))
@@ -102,7 +130,7 @@ def main() -> None:
         save_checkpoint(
             result["coordinator"],
             out_path,
-            meta={k: serializable[k] for k in ("train_pass_at_1", "seed", "generations")},
+            meta={k: serializable[k] for k in ("train_pass_at_1", "seed", "generations", "task_limit", "population")},
         )
         print(f"checkpoint: {out_path}")
 
