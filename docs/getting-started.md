@@ -164,6 +164,12 @@ mat-calibrate --connector <id> --limit 10
 
 ## Next steps
 
+- Run the full smoke dev loop:
+
+```bash
+bash scripts/dev-loop.sh
+```
+
 - [Connector spec](connector-spec.md) — YAML schema and capability vectors
 - [Eval protocol](eval-protocol.md) — honest benchmarking rules
 - [README](../README.md) — command reference and architecture

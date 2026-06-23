@@ -232,3 +232,6 @@ traces/*.jsonl
 connectors/installed/*.yaml
 !connectors/installed/README.md
 traces/*.json
+
+# local helper files
+connectors/curated/.local-dev-pool.tmp.yaml
