@@ -33,6 +33,7 @@ mat-sync-aa
 
 # Install connectors from ~/.cache/lm-studio/models (uses AA scrape per model if needed)
 mat-discover-lmstudio   # requires LM Studio up; maps exact /v1/models ids
+mat-pool sync-lmstudio  # align connector model_name to LM Studio /v1/models
 mat-pool verify         # fails if a connector model is not served
 
 # Smoke benchmark (needs LM Studio server on :1234)
@@ -42,6 +43,8 @@ mat-benchmark --split val --limit 2 --mode single --connector <id-from-mat-pool-
 export MAT_GATEWAY_KEY=local-dev-key
 mat-serve
 ```
+
+For a one-command local dev loop (pool sync + smoke benchmarks), see `bash scripts/dev-loop.sh`.
 
 Installed connectors live in **`~/.config/mat/connectors/`** — not `connectors/examples/`.
 See [docs/eval-protocol.md](docs/eval-protocol.md) for honest benchmarking rules.
@@ -54,7 +57,7 @@ See [docs/eval-protocol.md](docs/eval-protocol.md) for honest benchmarking rules
 | `mat-discover-lmstudio` | Build connectors from LM Studio downloads + AA |
 | `mat-import-aa <slug>` | Import one model (`--local` for LM Studio) |
 | `mat-calibrate --connector <id>` | Blend live coding pass rate into scores |
-| `mat-pool list` / `verify` / `sync-lmstudio` / `lmstudio-models` | Inspect installed pool |
+| `mat-pool list` / `verify` / `sync-lmstudio` / `lmstudio-models` / `rehash` / `apply` | Inspect and manage installed pool |
 | `mat-benchmark` | Live HumanEval eval vs single-model baselines |
 | `mat-train-live` | CMA-ES coordinator on train split (live LLMs) |
 | `mat-phase-a` | Simulation generalization spike |
