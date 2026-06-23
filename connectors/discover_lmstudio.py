@@ -15,6 +15,7 @@ from connectors.lmstudio_api import (
 )
 from connectors.loader import dump_connector, load_connector
 from connectors.paths import ensure_user_pool_dir
+from connectors.pool_curated import load_curated_ids
 from connectors.schema import Endpoint
 
 DEFAULT_LMSTUDIO_CACHE = Path.home() / ".cache" / "lm-studio" / "models"
@@ -154,6 +155,7 @@ def install_from_cache(
     base_url: str = DEFAULT_LMSTUDIO_URL,
     skip_missing_aa: bool = True,
     offline: bool = False,
+    only_ids: set[str] | None = None,
 ) -> list[Path]:
     """Write one connector per cached model with AA benchmarks and exact LM Studio model ids."""
     out_dir = out_dir or ensure_user_pool_dir()
@@ -193,12 +195,16 @@ def install_from_cache(
                 f"(hint={hint!r}). Run mat-sync-aa or mat-import-aa <slug>."
             )
 
+        safe_id = slugify(entry["catalog_path"].replace("/", "-"))
+        connector_id = f"{safe_id}@lmstudio"
+        if only_ids and connector_id not in only_ids:
+            continue
+
         model_name = resolve_model_name_for_entry(entry, served, offline=offline)
         if not model_name:
             skipped.append(entry["catalog_path"])
             continue
 
-        safe_id = slugify(entry["catalog_path"].replace("/", "-"))
         endpoint = Endpoint(
             type="openai",
             base_url=base_url,
@@ -209,7 +215,7 @@ def install_from_cache(
         connector = connector_from_aa(
             aa,
             endpoint=endpoint,
-            connector_id=f"{safe_id}@lmstudio",
+            connector_id=connector_id,
             locality="local",
             contributor="mat:discover-lmstudio",
             extra_notes=(
@@ -251,13 +257,20 @@ def main() -> None:
         action="store_true",
         help="do not call LM Studio; use heuristic model names (run mat-pool sync-lmstudio later)",
     )
+    parser.add_argument(
+        "--curated",
+        type=Path,
+        help="only install connector ids listed in this yaml (see connectors/curated/)",
+    )
     args = parser.parse_args()
+    only_ids = set(load_curated_ids(args.curated)) if args.curated else None
     paths = install_from_cache(
         cache_dir=args.cache,
         out_dir=args.out,
         base_url=args.base_url,
         skip_missing_aa=not args.strict_aa,
         offline=args.offline,
+        only_ids=only_ids,
     )
     for p in paths:
         print(p)

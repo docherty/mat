@@ -11,7 +11,7 @@ This guide walks through a **local LM Studio** setup on macOS. The same commands
 ```bash
 git clone <repo>
 cd mat
-pip install -e ".[dev]"
+python3.11 -m pip install -e ".[dev]"   # requires Python ≥3.11 (not system 3.9 pip)
 ```
 
 ## 1. Install your model pool
@@ -23,11 +23,11 @@ mat never guesses capability scores. Connectors are built from **Artificial Anal
 export ARTIFICIAL_ANALYSIS_API_KEY=...
 mat-sync-aa
 
-# Scan ~/.cache/lm-studio/models — requires LM Studio server with models loaded
-mat-discover-lmstudio
+# Curated local pool (3 models — recommended for routing dev)
+mat-discover-lmstudio --curated connectors/curated/local-dev-pool.yaml
+mat-pool apply connectors/curated/local-dev-pool.yaml   # drop any other installed connectors
 mat-pool list
-mat-pool verify          # each connector model_name must appear in GET /v1/models
-mat-pool lmstudio-models # show what LM Studio currently serves
+mat-pool verify
 ```
 
 Installed YAML files land in **`~/.config/mat/connectors/`**. The repo's `connectors/examples/` directory is boilerplate only.
@@ -124,11 +124,13 @@ Quality tiers: `fast`, `balanced`, `max`.
 
 ## 6. Calibrate a connector (optional)
 
-Blend live HumanEval **train** pass rate into the `coding` capability score:
+Blend live HumanEval **train** pass rate into `coding` score and measure **token efficiency**:
 
 ```bash
 mat-calibrate --connector <id> --limit 10
 ```
+
+`mat-calibrate` records `speed.median_output_tokens` and `speed.token_efficiency` (1.0 = at or below ~2500 output tokens on worker shots). Routing uses efficiency as a tie-break when capability scores are close — high tok/sec with bloated outputs scores worse.
 
 ## Troubleshooting
 

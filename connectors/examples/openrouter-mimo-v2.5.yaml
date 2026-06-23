@@ -44,6 +44,8 @@ capabilities:
 speed:
   tier: fast
   tokens_per_sec: null
+  median_output_tokens: null
+  token_efficiency: null
 benchmarks:
 - source: artificial_analysis
   metric: intelligence_index_v4.1
@@ -87,7 +89,7 @@ profile:
   probe_suite_version: null
   profiled_at: '2026-06-22T14:00:00Z'
   contributor: mat:examples
-  integrity_sha256: 50b6da8d819235b762752203830c63ac1fbdfec002452265250003e8e87fb7cf
+  integrity_sha256: e89622a703c1dfa31a9015ac7bccd0c9bb5b82ea60a6adfe217c6c4e95dfd525
   notes: Operational fields from OpenRouter API 2026-06-22. Capability scores from
     Artificial Analysis v4.1 index and sub-benchmarks. Cheaper/faster sibling to MiMo-V2.5-Pro;
     coding score is conservative pending mat probe.

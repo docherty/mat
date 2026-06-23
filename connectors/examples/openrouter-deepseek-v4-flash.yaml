@@ -44,6 +44,8 @@ capabilities:
 speed:
   tier: fast
   tokens_per_sec: null
+  median_output_tokens: null
+  token_efficiency: null
 benchmarks:
 - source: artificial_analysis
   metric: intelligence_index_v4.1
@@ -73,7 +75,7 @@ profile:
   probe_suite_version: null
   profiled_at: '2026-06-22T12:00:00Z'
   contributor: mat:examples
-  integrity_sha256: 71fe0305e9391ac7a8c1f4a0d0c73caeb3f5a93e21f28422015aa5a403f22568
+  integrity_sha256: 7e639beb2335c9e5126e118cdf8616a9faf2f0f2436c52817205601287e9ee3b
   notes: "Operational fields from OpenRouter API 2026-06-22. Capability scores mapped\
     \ from Artificial Analysis sub-benchmarks (LCB, GPQA, tau2, index). Not a mat\
     \ probe run \u2014 run mat-profile to replace with canonical scores."

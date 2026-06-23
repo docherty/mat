@@ -44,6 +44,8 @@ capabilities:
 speed:
   tier: fast
   tokens_per_sec: 90.0
+  median_output_tokens: null
+  token_efficiency: null
 benchmarks: []
 profile:
   profile_method: mat_probe
@@ -52,5 +54,5 @@ profile:
   probe_suite_version: '2026.1'
   profiled_at: '2026-06-01T12:00:00Z'
   contributor: mat:phase-a
-  integrity_sha256: 5cd2dd1bd71302432410b1e927765b6513e290a4d8f8cc86c1e5941455080283
+  integrity_sha256: bd910955594ea688a1943ca8c48469754191ebf2c4050595eb9189de372d98ab
   notes: null

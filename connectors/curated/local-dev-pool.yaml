@@ -1,0 +1,12 @@
+# Curated local pool for routing dev on M4 Max + LM Studio.
+# Apply: mat-pool apply connectors/curated/local-dev-pool.yaml
+#
+# Three distinct families/sizes so orchestration has real choices:
+#   - Qwen3.6 35B A3B — strongest coder (frontier-class local)
+#   - Gemma 4 26B — strong generalist, different bias
+#   - LFM2 24B A2B — Liquid MoE, often more concise / different trade-offs
+
+connectors:
+  - mlx-community-qwen3-6-35b-a3b-8bit@lmstudio
+  - lmstudio-community-gemma-4-26b-a4b-it-mlx-8bit@lmstudio
+  - lmstudio-community-lfm2-24b-a2b-mlx-8bit@lmstudio

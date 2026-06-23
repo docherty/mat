@@ -64,6 +64,8 @@ class Supports(BaseModel):
 class Speed(BaseModel):
     tier: Literal["fast", "medium", "slow"] = "medium"
     tokens_per_sec: float | None = None
+    median_output_tokens: float | None = None
+    token_efficiency: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class CapabilityDim(BaseModel):
@@ -87,7 +89,7 @@ class BenchmarkAttestation(BaseModel):
     source: str
     metric: str
     value: float
-    unit: Literal["index", "ratio", "percent"] = "ratio"
+    unit: Literal["index", "ratio", "percent", "tokens"] = "ratio"
     as_of: date
     url: str | None = None
     notes: str | None = None

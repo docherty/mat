@@ -1,0 +1,128 @@
+{
+  "summaries": [
+    {
+      "mode": "single",
+      "split": "val",
+      "tasks": 2,
+      "pass_at_1": 1.0,
+      "mean_steps": 1.0,
+      "mean_input_tokens": 210.5,
+      "mean_output_tokens": 2499.0,
+      "mean_cost_usd": 0.0,
+      "timestamp": "2026-06-23T07:53:37.182810+00:00",
+      "rows": [
+        {
+          "task_id": "HumanEval/43",
+          "mode": "single",
+          "passed": true,
+          "steps": 1,
+          "input_tokens": 215,
+          "output_tokens": 2622,
+          "estimated_cost_usd": 0.0,
+          "connector_ids": [
+            "mlx-community-qwen3-6-35b-a3b-8bit@lmstudio"
+          ],
+          "error": null
+        },
+        {
+          "task_id": "HumanEval/63",
+          "mode": "single",
+          "passed": true,
+          "steps": 1,
+          "input_tokens": 206,
+          "output_tokens": 2376,
+          "estimated_cost_usd": 0.0,
+          "connector_ids": [
+            "mlx-community-qwen3-6-35b-a3b-8bit@lmstudio"
+          ],
+          "error": null
+        }
+      ]
+    },
+    {
+      "mode": "single_reflect",
+      "split": "val",
+      "tasks": 2,
+      "pass_at_1": 1.0,
+      "mean_steps": 2.0,
+      "mean_input_tokens": 783.0,
+      "mean_output_tokens": 4076.5,
+      "mean_cost_usd": 0.0,
+      "timestamp": "2026-06-23T07:55:43.011784+00:00",
+      "rows": [
+        {
+          "task_id": "HumanEval/43",
+          "mode": "single_reflect",
+          "passed": true,
+          "steps": 2,
+          "input_tokens": 763,
+          "output_tokens": 3256,
+          "estimated_cost_usd": 0.0,
+          "connector_ids": [
+            "mlx-community-qwen3-6-35b-a3b-8bit@lmstudio",
+            "mlx-community-qwen3-6-35b-a3b-8bit@lmstudio"
+          ],
+          "error": null
+        },
+        {
+          "task_id": "HumanEval/63",
+          "mode": "single_reflect",
+          "passed": true,
+          "steps": 2,
+          "input_tokens": 803,
+          "output_tokens": 4897,
+          "estimated_cost_usd": 0.0,
+          "connector_ids": [
+            "mlx-community-qwen3-6-35b-a3b-8bit@lmstudio",
+            "mlx-community-qwen3-6-35b-a3b-8bit@lmstudio"
+          ],
+          "error": null
+        }
+      ]
+    },
+    {
+      "mode": "orchestrated",
+      "split": "val",
+      "tasks": 2,
+      "pass_at_1": 1.0,
+      "mean_steps": 2.0,
+      "mean_input_tokens": 780.0,
+      "mean_output_tokens": 3457.5,
+      "mean_cost_usd": 0.0,
+      "timestamp": "2026-06-23T07:58:05.340498+00:00",
+      "rows": [
+        {
+          "task_id": "HumanEval/43",
+          "mode": "orchestrated",
+          "passed": true,
+          "steps": 2,
+          "input_tokens": 760,
+          "output_tokens": 3102,
+          "estimated_cost_usd": 0.0,
+          "connector_ids": [
+            "mlx-community-qwen3-6-27b-8bit@lmstudio",
+            "mlx-community-qwen3-6-27b-8bit@lmstudio"
+          ],
+          "error": null
+        },
+        {
+          "task_id": "HumanEval/63",
+          "mode": "orchestrated",
+          "passed": true,
+          "steps": 2,
+          "input_tokens": 800,
+          "output_tokens": 3813,
+          "estimated_cost_usd": 0.0,
+          "connector_ids": [
+            "mlx-community-qwen3-6-27b-8bit@lmstudio",
+            "mlx-community-qwen3-6-27b-8bit@lmstudio"
+          ],
+          "error": null
+        }
+      ]
+    }
+  ],
+  "delta_pass_at_1": 0.0,
+  "cost_ratio_vs_best_single": null,
+  "best_single_mode": "single"
+}

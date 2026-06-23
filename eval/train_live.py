@@ -44,12 +44,14 @@ def train_live(
         scored_loop = LiveCodingLoop(pool, role_coord, worker=worker)
         passed = 0
         cost = 0.0
+        tokens = 0
         for task in tasks:
             result = scored_loop.run_orchestrated(task)
             passed += int(result.passed)
             cost += result.estimated_cost_usd
+            tokens += result.output_tokens
         n = len(tasks) or 1
-        return passed / n - 0.001 * cost
+        return passed / n - 0.001 * cost - 1e-6 * (tokens / n)
 
     x0 = _heuristic_weights()
     opts = cma.CMAOptions()

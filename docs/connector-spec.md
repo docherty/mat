@@ -13,9 +13,9 @@ today or reserved for a named near-term need documented below.
 |------|----------|
 | Call the model | `endpoint`, `context_window`, `max_output_tokens`, `supports`, `tool_format` |
 | Route work by skill | `capabilities.*.score` (primary), `capabilities.*.tier` (coordinator training) |
-| Break ties between similar models | `capabilities.*.score`, then `benchmarks`, then `speed`, then `pricing` |
-| Cost-aware routing | `pricing` |
-| Fast-path / bulk routing | `speed.tier` |
+| Break ties between similar models | `capabilities.*.score`, `speed.token_efficiency`, then `benchmarks`, then `pricing` |
+| Cost-aware routing | `pricing`, `speed.token_efficiency` |
+| Fast-path / bulk routing | `speed.tier`, `speed.token_efficiency` |
 | Share without re-measuring | file + `integrity_sha256` |
 | Trace where data came from | `profile` |
 
@@ -66,8 +66,10 @@ capabilities:               # score ∈ [0,1] is what the router optimises over
   tool_use:     { score: 0.95, tier: frontier }
 
 speed:
-  tier: fast                  # fast | medium | slow — API throughput class
-  tokens_per_sec: null        # optional; set when measured locally
+  tier: fast                  # fast | medium | slow — throughput / verbosity class
+  tokens_per_sec: null        # optional; from AA or local measurement
+  median_output_tokens: null  # optional; from mat-calibrate (worker pass tasks)
+  token_efficiency: null      # optional; 1.0 = concise vs reference (~2500 out tokens)
 
 benchmarks:                 # optional cited measurements for tie-break / audit
   - source: artificial_analysis

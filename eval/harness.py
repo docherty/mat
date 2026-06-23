@@ -76,7 +76,12 @@ def connector_score(task: Task, connector: Connector) -> float:
     score = 0.0
     for tag, weight in weights.items():
         score += weight * connector.capabilities[tag].score
-    return score / total_w
+    base = score / total_w
+    eff = connector.speed.token_efficiency
+    if eff is not None:
+        # Mild preference for concise models when capability is similar (±5% band).
+        base *= 0.85 + 0.15 * eff
+    return base
 
 
 def best_connector_for_task(task: Task, pool: list[Connector]) -> Connector:

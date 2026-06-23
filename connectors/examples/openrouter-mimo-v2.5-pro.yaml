@@ -44,6 +44,8 @@ capabilities:
 speed:
   tier: slow
   tokens_per_sec: null
+  median_output_tokens: null
+  token_efficiency: null
 benchmarks:
 - source: artificial_analysis
   metric: intelligence_index_v4.1
@@ -87,6 +89,6 @@ profile:
   probe_suite_version: null
   profiled_at: '2026-06-22T14:00:00Z'
   contributor: mat:examples
-  integrity_sha256: 9de98360e654b495e3351173e71c3962ba8cc872bdc6cc7b5adff495ad4f34d9
+  integrity_sha256: 149a2fbf0aa7302e6e5b3220b42128f78cb69838a586eee7695a7e3ed8aeebc9
   notes: Operational fields from OpenRouter API 2026-06-22. AA v4.1 scores with sub-benchmark
     mapping. AA reports notably slow output speed but concise token use on index eval.

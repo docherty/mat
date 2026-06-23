@@ -33,7 +33,8 @@ Report all of these — not just pass@1:
 
 1. **Lift:** `orchestrated.pass@1 − best(single, single_reflect).pass@1` ≥ **0.08**
 2. **Cost:** `orchestrated.mean_cost_usd` ≤ **2×** best single (local pool = $0)
-3. **Stability:** per-task trace logs; no manual cherry-picking
+3. **Token efficiency:** report `mean_output_tokens` per mode; calibrate with `mat-calibrate` for `speed.token_efficiency`
+4. **Stability:** per-task trace logs; no manual cherry-picking
 
 If lift is under 5pp after pool/prompt iteration, change the pool before more coordinator tuning.
 
