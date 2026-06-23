@@ -4,7 +4,7 @@ Plan: [trinity-alignment.md](./trinity-alignment.md) · Paper: [arXiv:2512.04695
 
 **Goal:** val pass@1 lift ≥ **+8pp** over `max(single, single_reflect)` with fair 5-turn budget.
 
-**Last updated:** 2026-06-23 — val compare with trained checkpoint **running** (`traces/val_compare_trained.log`)
+**Last updated:** 2026-06-23 — val compare complete (`traces/val_compare_trained.json`)
 
 ---
 
@@ -20,17 +20,13 @@ Plan: [trinity-alignment.md](./trinity-alignment.md) · Paper: [arXiv:2512.04695
 | 6 | `per_question_best` / `gap_to_union` metrics | done | compare + union modes |
 | 7 | sep-CMA-ES + larger train defaults | done | `mat-train-live` |
 | 8 | Train linear coordinator (10 train tasks) | done | 90% train pass@1; weights updated |
-| 9 | Full val compare (trained checkpoint) | **running** | DeepSeek baseline + orchestrated, 23 val tasks |
+| 9 | Full val compare (trained checkpoint) | done | **0pp** vs DeepSeek single; **8.7pp** below union |
 
 ---
 
 ## Active run
 
-```bash
-tail -f traces/val_compare_trained.log
-```
-
-Output: `traces/val_compare_trained.json` (when complete).
+None. Last compare: `traces/val_compare_trained.json`.
 
 ```bash
 # Union ceiling only (fastest diagnostic)
@@ -62,7 +58,6 @@ python3.11 scripts/merge_union.py traces/val_qwen_single.json traces/val_deepsee
 
 | Run | per_question_best | best single | orchestrated | delta | gap_to_union |
 |-----|-------------------|-------------|--------------|-------|--------------|
-| Union (3 connectors, val 23) | **91.3%** | **87.0%** (DeepSeek) | — | — | — |
-| Qwen / DeepSeek / MiMo singles | — | 82.6% / 87.0% / 78.3% | — | — | — |
+| Trained compare (val 23, DeepSeek baseline) | 95.7%* | **87.0%** (single) | **87.0%** | **0.0pp** | **8.7pp** |
 
-Fill this table as benchmarks complete.
+\*Compare `per_question_best` uses single+reflect baselines for this connector only (95.7%), not the 3-connector union (91.3%).
