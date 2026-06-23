@@ -1,0 +1,72 @@
+connector_version: '1.1'
+id: lmstudio-community-lfm2-24b-a2b-mlx-8bit@lmstudio
+display_name: LFM2 24B A2B (local)
+endpoint:
+  type: openai
+  base_url: http://127.0.0.1:1234/v1
+  model_name: liquid/lfm2-24b-a2b
+  auth_env: LMSTUDIO_API_KEY
+context_window: 131072
+max_output_tokens: 4096
+modalities:
+- text
+pricing: null
+locality: local
+supports:
+  tools: false
+  json_mode: true
+  streaming: true
+  system_prompt: true
+  reasoning: false
+tool_format: openai
+capabilities:
+  reasoning:
+    score: 0.473737373737374
+    tier: mid
+  coding:
+    score: 0.5
+    tier: mid
+  long_context:
+    score: 0.5
+    tier: mid
+  instruction_following:
+    score: 0.5
+    tier: mid
+  verification:
+    score: 0.5
+    tier: mid
+  tool_use:
+    score: 0.5
+    tier: mid
+speed:
+  tier: medium
+  tokens_per_sec: null
+  median_output_tokens: null
+  token_efficiency: null
+benchmarks:
+- source: artificial_analysis
+  metric: intelligence_index_v4.1
+  value: 4.94653434961859
+  unit: index
+  as_of: '2026-06-23'
+  url: https://artificialanalysis.ai/models/lfm2-24b-a2b
+  notes: null
+- source: artificial_analysis
+  metric: gpqa_diamond
+  value: 0.473737373737374
+  unit: ratio
+  as_of: '2026-06-23'
+  url: https://artificialanalysis.ai/models/lfm2-24b-a2b
+  notes: null
+profile:
+  profile_method: benchmark_import
+  catalog: lmstudio
+  catalog_id: lmstudio-community/LFM2-24B-A2B-MLX-8bit
+  probe_suite_version: null
+  profiled_at: '2026-06-23T07:13:12.976019Z'
+  contributor: mat:discover-lmstudio
+  integrity_sha256: a15548523e52242c7d6ecca3fbfbcabd194df6f9d2eb2b6f5661e5de95ab1a66
+  notes: 'Capability scores from Artificial Analysis benchmark import. AA slug: lfm2-24b-a2b.
+    LM Studio cache: /Users/jmd/.cache/lm-studio/models/lmstudio-community/LFM2-24B-A2B-MLX-8bit.
+    Load this folder in LM Studio; set endpoint.model_name to match GET /v1/models
+    if needed.'

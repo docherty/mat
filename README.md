@@ -51,8 +51,12 @@ mat-serve
 
 For a one-command local dev loop (pool sync + smoke benchmarks), see `bash scripts/dev-loop.sh`.
 
-Installed connectors live in **`~/.config/mat/connectors/`** — not `connectors/examples/`.
-See [docs/eval-protocol.md](docs/eval-protocol.md) for honest benchmarking rules.
+Installed connectors live in **`connectors/library/`** with the active set in **`active.yaml`**. See [docs/runbook.md](docs/runbook.md).
+
+```bash
+mat-serve       # OpenAI-compatible gateway
+mat-dashboard   # live pool + routing TUI (run beside mat-serve)
+```
 
 ## Commands
 
@@ -62,7 +66,9 @@ See [docs/eval-protocol.md](docs/eval-protocol.md) for honest benchmarking rules
 | `mat-discover-lmstudio` | Build connectors from LM Studio downloads + AA |
 | `mat-import-aa <slug>` | Import one model (`--local` for LM Studio) |
 | `mat-calibrate --connector <id>` | Blend live coding pass rate into scores |
-| `mat-pool list` / `verify` / `sync-lmstudio` / `lmstudio-models` / `rehash` / `apply` | Inspect and manage installed pool |
+| `mat-pool list` / `verify` / `sync-lmstudio` / `lmstudio-models` / `rehash` / `apply` / `sync-pricing` | Manage library + active pool |
+| `mat-migrate-pool` | Copy legacy ~/.config/mat/connectors into library |
+| `mat-dashboard` | Live TUI: pool health, recent routing decisions |
 | `mat-benchmark` | Live HumanEval eval vs single-model baselines |
 | `mat-train-live` | CMA-ES coordinator on train split (live LLMs) |
 | `mat-phase-a` | Simulation generalization spike |
@@ -109,8 +115,9 @@ pip install -e ".[slm]"   # torch + transformers; best on M4 / 4090
 
 | Path | Purpose |
 |------|---------|
+| `connectors/library/` | **Shareable connector library** |
+| `active.yaml` | **Active pool selection** (connector IDs) |
 | `connectors/examples/` | Boilerplate only — not the runtime pool |
-| `~/.config/mat/connectors/` | **Your installed pool** |
 | `eval/` | Live loop, benchmark, HumanEval splits |
 | `workers/` | OpenAI-compatible LLM client |
 | `coordinator/` | Routing policy, checkpoint, SLM (optional) |

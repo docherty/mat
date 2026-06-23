@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 from connectors.schema import Connector
@@ -12,7 +13,7 @@ from eval.oracle import Task, run_oracle
 from loop.coding_detect import extract_coding_prompt, guess_entry_point, is_coding_request
 from loop.difficulty import assess_difficulty, step_budget_for_tier
 from loop.modality import compatible_pool, required_modalities
-from workers.llm import LLMWorker
+from workers.llm import CompletionResult, LLMWorker, StreamChunk, estimate_cost_usd
 
 
 @dataclass
@@ -66,6 +67,64 @@ class OrchestrationLoop:
             return self._run_live(messages, coding_task=coding_task)
         return self._run_simulated(messages, coding_task=coding_task)
 
+    def run_stream(
+        self, messages: list[dict], *, coding_task: dict | None = None
+    ) -> Iterator[StreamChunk]:
+        """Stream response tokens when the upstream model supports streaming."""
+        if not self.live or not self.pool:
+            result = self.run(messages, coding_task=coding_task)
+            yield StreamChunk(text=result.answer, done=True)
+            return
+
+        req_mod = required_modalities(messages)
+        pool = compatible_pool(self.pool, required=req_mod)
+        if not pool:
+            yield StreamChunk(
+                text=f"(no connector supports modalities={sorted(req_mod)})",
+                done=True,
+            )
+            return
+
+        if coding_task is None and not is_coding_request(messages):
+            difficulty = assess_difficulty(messages)
+            task = Task(
+                id="chat",
+                prompt=extract_coding_prompt(messages),
+                tests="",
+                difficulty=difficulty,
+                required_tags={"instruction_following": 1.0},
+                entry_point=None,
+            )
+            conn = self._role_coordinator.pick(task, pool, role="worker")
+            if conn.supports.streaming:
+                for chunk in self.worker.stream_complete(conn, messages):
+                    if chunk.done and chunk.result:
+                        chunk.connector_id = conn.id
+                        chunk.stages = ["chat_passthrough"]
+                        chunk.cost_usd = estimate_cost_usd(
+                            conn, chunk.result.input_tokens, chunk.result.output_tokens
+                        )
+                    yield chunk
+                return
+
+        result = self._run_live(messages, coding_task=coding_task)
+        step = max(1, len(result.answer) // 40)
+        for i in range(0, len(result.answer), step):
+            yield StreamChunk(text=result.answer[i : i + step])
+        yield StreamChunk(
+            done=True,
+            connector_id=result.connector_id,
+            stages=result.stages,
+            passed=result.passed,
+            cost_usd=result.estimated_cost_usd,
+            result=CompletionResult(
+                text=result.answer,
+                input_tokens=result.input_tokens,
+                output_tokens=result.output_tokens,
+                model=result.model_id or "",
+            ),
+        )
+
     def _run_live(self, messages: list[dict], *, coding_task: dict | None) -> LoopResult:
         req_mod = required_modalities(messages)
         pool = compatible_pool(self.pool, required=req_mod)
@@ -94,6 +153,7 @@ class OrchestrationLoop:
             )
             conn = self._role_coordinator.pick(task, pool, role="worker")
             completion = self.worker.complete(conn, messages)
+            cost = estimate_cost_usd(conn, completion.input_tokens, completion.output_tokens)
             return LoopResult(
                 answer=completion.text,
                 passed=True,
@@ -103,7 +163,7 @@ class OrchestrationLoop:
                 stages=["chat_passthrough"],
                 input_tokens=completion.input_tokens,
                 output_tokens=completion.output_tokens,
-                estimated_cost_usd=0.0,
+                estimated_cost_usd=cost,
             )
 
         config = LiveLoopConfig(

@@ -1,0 +1,80 @@
+connector_version: '1.1'
+id: deepseek-v4-flash@venice
+display_name: DeepSeek V4 Flash (Max)
+endpoint:
+  type: openai
+  base_url: https://api.venice.ai/api/v1
+  model_name: deepseek-v4-flash
+  auth_env: VENICE_API_KEY
+context_window: 131072
+max_output_tokens: 4096
+modalities:
+- text
+pricing:
+  input_per_1k: 0.00017
+  output_per_1k: 0.00035
+  currency: USD
+locality: api
+supports:
+  tools: false
+  json_mode: true
+  streaming: true
+  system_prompt: true
+  reasoning: false
+tool_format: openai
+capabilities:
+  reasoning:
+    score: 0.893939393939394
+    tier: frontier
+  coding:
+    score: 0.561676376751283
+    tier: mid
+  long_context:
+    score: 0.5
+    tier: mid
+  instruction_following:
+    score: 0.5
+    tier: mid
+  verification:
+    score: 0.5
+    tier: mid
+  tool_use:
+    score: 0.5
+    tier: mid
+speed:
+  tier: medium
+  tokens_per_sec: null
+  median_output_tokens: null
+  token_efficiency: null
+benchmarks:
+- source: artificial_analysis
+  metric: intelligence_index_v4.1
+  value: 37.8370323723345
+  unit: index
+  as_of: '2026-06-23'
+  url: https://artificialanalysis.ai/models/deepseek-v4-flash
+  notes: null
+- source: artificial_analysis
+  metric: coding_index
+  value: 56.1676376751283
+  unit: index
+  as_of: '2026-06-23'
+  url: https://artificialanalysis.ai/models/deepseek-v4-flash
+  notes: null
+- source: artificial_analysis
+  metric: gpqa_diamond
+  value: 0.893939393939394
+  unit: ratio
+  as_of: '2026-06-23'
+  url: https://artificialanalysis.ai/models/deepseek-v4-flash
+  notes: null
+profile:
+  profile_method: benchmark_import
+  catalog: artificial_analysis
+  catalog_id: deepseek-v4-flash
+  probe_suite_version: null
+  profiled_at: '2026-06-23T09:11:02.478296Z'
+  contributor: mat:import-aa
+  integrity_sha256: d808de324e301fa5f0ea03d8be985922f5908b709e800ad29cd4af741301388d
+  notes: 'Capability scores from Artificial Analysis benchmark import. AA slug: deepseek-v4-flash.
+    pricing=venice:/models.'

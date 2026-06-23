@@ -9,6 +9,8 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from api.pool_health import build_pool_health
+from api.telemetry import RequestRecord, telemetry
 from connectors.dotenv import load_env
 from connectors.paths import default_pool_dir
 from connectors.pool_resolver import resolve_pool
@@ -19,7 +21,6 @@ QUALITY_TIERS = ("fast", "balanced", "max")
 
 class ChatMessage(BaseModel):
     role: str
-    # OpenAI-compatible: content can be a string or an array of content parts (e.g. image_url).
     content: Any | None = None
 
 
@@ -49,11 +50,33 @@ def _check_auth(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="invalid gateway key")
 
 
+def _record_request(
+    *,
+    tier: str,
+    result,
+    latency_ms: float,
+    stream: bool,
+) -> None:
+    telemetry.record(
+        RequestRecord(
+            ts=time.time(),
+            tier=tier,
+            connector_id=result.connector_id,
+            model_id=result.model_id,
+            stages=list(result.stages),
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            cost_usd=result.estimated_cost_usd,
+            latency_ms=latency_ms,
+            passed=result.passed,
+            stream=stream,
+        )
+    )
+
+
 def create_app(connectors_dir: str | None = None) -> FastAPI:
     load_env()
     app = FastAPI(title="mat", version="0.1.0")
-    # Backwards compat: callers may still pass a pool directory directly (connectors_dir).
-    # Default behavior is now: if active manifest exists, use it; else fall back to legacy pool dir.
     explicit_pool_dir = connectors_dir if connectors_dir else None
 
     def _load_pool() -> list:
@@ -78,25 +101,52 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
     def _loop(tier: str) -> OrchestrationLoop:
         return OrchestrationLoop.from_env(pool, quality_tier=tier)
 
-    @app.get("/health")
-    def health() -> dict:
-        # If the server started before connectors were fixed, allow self-healing without restart.
+    def _health_payload(*, reload: bool = False) -> dict:
         nonlocal pool
-        if app.state.pool_error:
+        if reload or app.state.pool_error:
             pool = _load_pool()
+        pool_health = build_pool_health(pool) if pool else {"status": "empty", "connectors": []}
+        overall = "ok"
+        if app.state.pool_error or not pool:
+            overall = "error"
+        elif pool_health.get("status") == "degraded":
+            overall = "degraded"
         return {
-            "status": "ok",
+            "status": overall,
             "live": live_enabled(),
             "pool_size": len(pool),
             "pool_dir": str(getattr(app.state, "pool_dir", "")),
             "pool_source": getattr(app.state, "pool_source", None),
             "active_manifest": getattr(app.state, "active_manifest", None),
             "pool_error": app.state.pool_error,
+            "pool_health": pool_health,
+            "metrics": telemetry.snapshot(),
         }
+
+    @app.get("/health")
+    def health() -> dict:
+        return _health_payload(reload=bool(app.state.pool_error))
+
+    @app.get("/v1/mat/status")
+    def mat_status(authorization: str | None = Header(default=None)) -> dict:
+        _check_auth(authorization)
+        return _health_payload(reload=True)
+
+    @app.get("/v1/mat/metrics")
+    def mat_metrics(authorization: str | None = Header(default=None)) -> dict:
+        _check_auth(authorization)
+        return telemetry.snapshot()
+
+    @app.get("/v1/mat/recent")
+    def mat_recent(
+        authorization: str | None = Header(default=None),
+        limit: int = 20,
+    ) -> dict:
+        _check_auth(authorization)
+        return {"recent": telemetry.recent(limit=min(limit, 50))}
 
     @app.get("/v1/models")
     def list_models() -> dict:
-        # OpenAI-compatible: list both the routing tiers and installed connector ids.
         data = [{"id": tier, "object": "model", "owned_by": "mat"} for tier in QUALITY_TIERS]
         for c in pool:
             data.append({"id": c.id, "object": "model", "owned_by": "mat"})
@@ -124,11 +174,18 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
 
         if body.stream:
             return StreamingResponse(
-                _stream_response(loop, messages, tier, body.seed),
+                _stream_response(loop, messages, tier),
                 media_type="text/event-stream",
             )
 
+        t0 = time.perf_counter()
         result = loop.run(messages)
+        _record_request(
+            tier=tier,
+            result=result,
+            latency_ms=(time.perf_counter() - t0) * 1000,
+            stream=False,
+        )
         return _completion_payload(result, tier)
 
     return app
@@ -162,49 +219,79 @@ def _completion_payload(result, tier: str) -> dict:
     }
 
 
-def _stream_response(loop: OrchestrationLoop, messages: list[dict], tier: str, seed: int | None):
+def _stream_response(loop: OrchestrationLoop, messages: list[dict], tier: str):
     chunk_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
-    narrations = (
-        []
-        if tier == "fast"
-        else [
-            "Assessing task difficulty…",
-            "Selecting specialists from pool…",
-            "Synthesizing response…",
-        ]
-    )
-    for line in narrations:
-        payload = {
-            "id": chunk_id,
-            "object": "chat.completion.chunk",
-            "choices": [
-                {
-                    "index": 0,
-                    "delta": {"reasoning_content": line},
-                    "finish_reason": None,
-                }
-            ],
-        }
-        yield f"data: {json_dumps(payload)}\n\n"
-        time.sleep(0.05)
+    t0 = time.perf_counter()
+    connector_id = ""
+    model_id: str | None = None
+    stages: list[str] = []
+    input_tokens = 0
+    output_tokens = 0
+    cost_usd = 0.0
+    passed = True
+    answer_parts: list[str] = []
 
-    result = loop.run(messages)
+    for chunk in loop.run_stream(messages):
+        if chunk.text:
+            answer_parts.append(chunk.text)
+            payload = {
+                "id": chunk_id,
+                "object": "chat.completion.chunk",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": chunk.text},
+                        "finish_reason": None,
+                    }
+                ],
+            }
+            yield f"data: {_json_dumps(payload)}\n\n"
+        if chunk.done:
+            connector_id = chunk.connector_id or connector_id
+            stages = chunk.stages or stages
+            passed = chunk.passed
+            cost_usd = chunk.cost_usd
+            if chunk.result:
+                model_id = chunk.result.model
+                input_tokens = chunk.result.input_tokens
+                output_tokens = chunk.result.output_tokens
+
+    latency_ms = (time.perf_counter() - t0) * 1000
+    from loop.runner import LoopResult
+
+    pseudo = LoopResult(
+        answer="".join(answer_parts),
+        passed=passed,
+        steps=len(stages) or 1,
+        connector_id=connector_id or "(unknown)",
+        model_id=model_id,
+        stages=stages or ["stream"],
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        estimated_cost_usd=cost_usd,
+    )
+    _record_request(tier=tier, result=pseudo, latency_ms=latency_ms, stream=True)
+
     payload = {
         "id": chunk_id,
         "object": "chat.completion.chunk",
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"content": result.answer},
-                "finish_reason": "stop",
-            }
-        ],
+        "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+        "usage": {
+            "x_mat": {
+                "stages": stages,
+                "connector_id": connector_id,
+                "model_id": model_id,
+                "passed": passed,
+                "cost_usd": cost_usd,
+                "latency_ms": round(latency_ms, 1),
+            },
+        },
     }
-    yield f"data: {json_dumps(payload)}\n\n"
+    yield f"data: {_json_dumps(payload)}\n\n"
     yield "data: [DONE]\n\n"
 
 
-def json_dumps(obj: dict) -> str:
+def _json_dumps(obj: dict) -> str:
     import json
 
     return json.dumps(obj)

@@ -23,6 +23,7 @@ dependencies = [
     "pydantic>=2.10.0",
     "python-dotenv>=1.0.1",
     "pyyaml>=6.0.2",
+    "rich>=13.9.0",
     "uvicorn[standard]>=0.32.0",
 ]
 
@@ -50,6 +51,7 @@ mat-discover-lmstudio = "connectors.discover_lmstudio:main"
 mat-calibrate = "connectors.calibrate:main"
 mat-pool = "connectors.cli_pool:main"
 mat-migrate-pool = "connectors.cli_migrate_pool:main"
+mat-dashboard = "api.dashboard:main"
 
 [build-system]
 requires = ["hatchling"]

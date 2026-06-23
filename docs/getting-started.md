@@ -135,6 +135,14 @@ mat-benchmark --split val --mode compare \
 
 `mat-serve` exposes an OpenAI-compatible API. By default **`MAT_LIVE=1`** — real LLM calls when a pool is installed.
 
+In a **second terminal**, run the live dashboard:
+
+```bash
+mat-dashboard
+```
+
+Shows active pool, LM Studio served status, recent routing decisions, and request metrics.
+
 ```bash
 export MAT_GATEWAY_KEY=local-dev-key
 export MAT_CHECKPOINT=~/.config/mat/coordinator/latest.json   # optional
