@@ -69,7 +69,7 @@ speed:
   tier: fast                  # fast | medium | slow — throughput / verbosity class
   tokens_per_sec: null        # optional; from AA or local measurement
   median_output_tokens: null  # optional; from mat-calibrate (worker pass tasks)
-  token_efficiency: null      # optional; 1.0 = concise vs reference (~2500 out tokens)
+  token_efficiency: null      # optional; 1.0 = concise vs reference (~1000 out tokens)
 
 benchmarks:                 # optional cited measurements for tie-break / audit
   - source: artificial_analysis

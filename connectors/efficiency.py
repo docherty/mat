@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-# HumanEval worker-shot reference: pool median after calibration (~2.5k on 35B).
-DEFAULT_REFERENCE_OUTPUT_TOKENS = 2500.0
+# HumanEval worker-shot reference. We want models that answer concisely; set the
+# reference to 1000 output tokens for a typical solution with minimal explanation.
+DEFAULT_REFERENCE_OUTPUT_TOKENS = 1000.0
 
 
 def token_efficiency_score(

@@ -148,6 +148,13 @@ def cmd_apply(pool_dir: Path, curated_path: Path) -> int:
     return 0
 
 
+def _parse_curated_arg(parser: argparse.ArgumentParser, args: argparse.Namespace) -> Path:
+    curated = args.curated
+    if curated:
+        return curated
+    return Path(__file__).resolve().parent / "curated" / "local-dev-pool.yaml"
+
+
 def main() -> None:
     load_env()
     parser = argparse.ArgumentParser(description="List or verify installed connector pool")
@@ -162,6 +169,12 @@ def main() -> None:
         type=Path,
         help="curated pool yaml (for apply); default: connectors/curated/local-dev-pool.yaml",
     )
+    parser.add_argument(
+        "--keep",
+        action="append",
+        default=[],
+        help="connector id to keep when applying curated pool (repeatable)",
+    )
     args = parser.parse_args()
     pool = args.pool or default_pool_dir()
     if args.command == "list":
@@ -171,9 +184,16 @@ def main() -> None:
     if args.command == "sync-lmstudio":
         raise SystemExit(cmd_sync_lmstudio(pool, base_url=args.base_url))
     if args.command == "apply":
-        curated = args.curated or (
-            Path(__file__).resolve().parent / "curated" / "local-dev-pool.yaml"
-        )
+        curated = _parse_curated_arg(parser, args)
+        # If you want to keep an extra connector (e.g. Venice) while applying a curated local pool,
+        # append it to a temporary curated list.
+        if args.keep:
+            from connectors.pool_curated import load_curated_ids
+
+            ids = load_curated_ids(curated) + list(args.keep)
+            tmp = curated.parent / f".{curated.stem}.tmp.yaml"
+            tmp.write_text("connectors:\n" + "".join(f"  - {cid}\n" for cid in ids))
+            curated = tmp
         raise SystemExit(cmd_apply(pool, curated))
     if args.command == "rehash":
         raise SystemExit(cmd_rehash(pool))

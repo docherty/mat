@@ -85,7 +85,22 @@ def connector_score(task: Task, connector: Connector) -> float:
 
 
 def best_connector_for_task(task: Task, pool: list[Connector]) -> Connector:
-    return max(pool, key=lambda c: connector_score(task, c))
+    # Primary: capability fit. Secondary: prefer local when within a small margin.
+    scored = [(connector_score(task, c), c) for c in pool]
+    best_score = max(s for s, _ in scored)
+    close = [c for s, c in scored if best_score - s <= 0.05]
+    if not close:
+        return max(pool, key=lambda c: connector_score(task, c))
+
+    def tiebreak(connector: Connector) -> tuple[float, float, float]:
+        # local models are cheaper + more reproducible; prefer them when quality is similar.
+        locality_bonus = 1.0 if connector.locality == "local" else 0.0
+        eff = connector.speed.token_efficiency or 0.5
+        # pricing: prefer cheaper output when known
+        price = connector.pricing.output_per_1k if connector.pricing else 0.0
+        return (locality_bonus, eff, -price)
+
+    return max(close, key=tiebreak)
 
 
 def synthesize_code(task: Task, connector: Connector) -> str:

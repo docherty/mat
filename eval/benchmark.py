@@ -24,6 +24,7 @@ class BenchmarkRow:
     output_tokens: int
     estimated_cost_usd: float
     connector_ids: list[str]
+    model_ids: list[str] = field(default_factory=list)
     error: str | None = None
 
 
@@ -82,6 +83,7 @@ def run_benchmark(
                 output_tokens=result.output_tokens,
                 estimated_cost_usd=result.estimated_cost_usd,
                 connector_ids=result.connector_ids,
+                model_ids=[t.completion.model for t in result.turns],
                 error=result.error,
             )
         )

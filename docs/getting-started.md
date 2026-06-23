@@ -29,7 +29,7 @@ mat-sync-aa
 
 # Curated local pool (3 models — recommended for routing dev)
 mat-discover-lmstudio --curated connectors/curated/local-dev-pool.yaml
-mat-pool apply connectors/curated/local-dev-pool.yaml   # drop any other installed connectors
+mat-pool apply --curated connectors/curated/local-dev-pool.yaml --keep deepseek-v4-flash@venice
 mat-pool list
 mat-pool verify
 ```
@@ -72,6 +72,20 @@ Modes:
 | `compare` | Baselines + orchestrated; pass `--connector` to compare one model only |
 
 See [eval-protocol.md](eval-protocol.md) for train/val splits and the +8pp success gate.
+
+## Optional: add a Venice API model
+
+Venice is OpenAI-compatible. Put `VENICE_API_KEY=...` in your `.env`, then:
+
+```bash
+mat-import-aa deepseek-v4-flash \
+  --base-url https://api.venice.ai/api/v1 \
+  --model-name deepseek-v4-flash \
+  --auth-env VENICE_API_KEY \
+  --connector-id deepseek-v4-flash@venice
+```
+
+Then re-run `mat-pool list` and `mat-pool verify`.
 
 ## 4. Train coordinator (optional)
 
@@ -134,7 +148,7 @@ Blend live HumanEval **train** pass rate into `coding` score and measure **token
 mat-calibrate --connector <id> --limit 10
 ```
 
-`mat-calibrate` records `speed.median_output_tokens` and `speed.token_efficiency` (1.0 = at or below ~2500 output tokens on worker shots). Routing uses efficiency as a tie-break when capability scores are close — high tok/sec with bloated outputs scores worse.
+`mat-calibrate` records `speed.median_output_tokens` and `speed.token_efficiency` (1.0 = at or below ~1000 output tokens on worker shots). Routing uses efficiency as a tie-break when capability scores are close — high tok/sec with bloated outputs scores worse.
 
 ## Troubleshooting
 
