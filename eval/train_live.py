@@ -71,6 +71,9 @@ def train_live(
 
 
 def main() -> None:
+    import warnings
+
+    warnings.filterwarnings("ignore", message="Could not import matplotlib.pyplot")
     parser = argparse.ArgumentParser(description="Live CMA-ES on HumanEval train split only")
     parser.add_argument("--pool", type=Path, default=None)
     parser.add_argument("--tasks", type=int, default=5, help="train tasks per fitness eval")

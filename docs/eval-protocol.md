@@ -25,7 +25,7 @@ more than once, refresh with a new held-out split.
 | `single` | One model, one worker shot (no think/verify) |
 | `single_reflect` | Same model, full think→work→verify — **budget-matched** baseline |
 | `orchestrated` | mat multi-model T/W/V with capability routing |
-| `compare` | All of the above for every connector in the pool |
+| `compare` | All of the above; add `--connector <id>` to baseline one model (recommended for local LM Studio) |
 
 ## Success criteria (val split)
 

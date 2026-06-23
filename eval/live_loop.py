@@ -105,18 +105,12 @@ class LiveCodingLoop:
         *,
         reflect: bool = False,
     ) -> LiveLoopResult:
-        """One model only — optional budget-matched think/work/verify on same connector."""
-        if not reflect:
-            return self._run_roles(
-                task,
-                lambda _role: connector,
-                stages=["single"],
-            )
+        """One model — worker + oracle; optional full think/work/verify when reflect=True."""
         return self._run_roles(
             task,
             lambda _role: connector,
-            stages=["single_reflect"],
-            force_sequence=True,
+            stages=["single_reflect"] if reflect else ["single"],
+            force_sequence=reflect,
         )
 
     def run_orchestrated(self, task: Task) -> LiveLoopResult:

@@ -22,16 +22,26 @@ AA_MODELS_URL = "https://artificialanalysis.ai/api/v2/language/models"
 AA_MODEL_URL = "https://artificialanalysis.ai/api/v2/language/models/{slug}"
 AA_PUBLIC_URL = "https://artificialanalysis.ai/models/{slug}"
 
-_SCRAPE_PATTERNS: dict[str, re.Pattern[str]] = {
-    "artificial_analysis_intelligence_index": re.compile(
-        r'intelligence_index_v4_1\\":\s*([0-9.]+)'
-    ),
-    "artificial_analysis_coding_index": re.compile(r'coding_index\\":\s*([0-9.]+)'),
-    "livecodebench": re.compile(r'livecodebench\\":\s*([0-9.]+)'),
-    "gpqa": re.compile(r'gpqa(?:_diamond)?\\":\s*([0-9.]+)'),
-    "tau2_bench_telecom": re.compile(r'tau2_bench_telecom\\":\s*([0-9.]+)'),
-    "aa_lcr": re.compile(r'aa_lcr\\":\s*([0-9.]+)'),
-    "terminal_bench_hard": re.compile(r'terminal_bench_hard\\":\s*([0-9.]+)'),
+_SCRAPE_PATTERNS: dict[str, list[re.Pattern[str]]] = {
+    "artificial_analysis_intelligence_index": [
+        re.compile(r'intelligence_index_v4_1\\":\s*([0-9.]+)'),
+        re.compile(r'estimated_intelligence_index_v4_1\\":\s*([0-9.]+)'),
+    ],
+    "artificial_analysis_coding_index": [
+        re.compile(r'coding_index\\":\s*([0-9.]+)'),
+    ],
+    "gpqa": [
+        re.compile(r'gpqa(?:_diamond)?\\":\s*([0-9.]+)'),
+    ],
+    "tau2_bench_telecom": [
+        re.compile(r'tau2_bench_telecom\\":\s*([0-9.]+)'),
+    ],
+    "aa_lcr": [
+        re.compile(r'aa_lcr\\":\s*([0-9.]+)'),
+    ],
+    "terminal_bench_hard": [
+        re.compile(r'terminal_bench_hard\\":\s*([0-9.]+)'),
+    ],
 }
 
 
@@ -73,17 +83,50 @@ def fetch_all_models(*, cache_path: Path | None = None) -> list[dict]:
     return models
 
 
+def _first_match(patterns: list[re.Pattern[str]], text: str) -> float | None:
+    for pattern in patterns:
+        match = pattern.search(text)
+        if match:
+            return float(match.group(1))
+    return None
+
+
+def _coherent_coding_index(intelligence_index: float | None, coding_index: float | None) -> bool:
+    """Reject comparison-chart leaks where coding_index is far above intelligence."""
+    if coding_index is None or intelligence_index is None:
+        return True
+    return (coding_index / 100.0) <= (intelligence_index / 60.0) + 0.35
+
+
+def _scrape_evaluations(html: str) -> dict[str, float]:
+    evaluations: dict[str, float] = {}
+    intelligence = _first_match(_SCRAPE_PATTERNS["artificial_analysis_intelligence_index"], html)
+    if intelligence is not None:
+        evaluations["artificial_analysis_intelligence_index"] = intelligence
+
+    coding = _first_match(_SCRAPE_PATTERNS["artificial_analysis_coding_index"], html)
+    if coding is not None and _coherent_coding_index(intelligence, coding):
+        evaluations["artificial_analysis_coding_index"] = coding
+
+    for key, patterns in _SCRAPE_PATTERNS.items():
+        if key in (
+            "artificial_analysis_intelligence_index",
+            "artificial_analysis_coding_index",
+        ):
+            continue
+        value = _first_match(patterns, html)
+        if value is not None:
+            evaluations[key] = value
+    return evaluations
+
+
 def fetch_aa_public(slug: str) -> dict:
     """Scrape headline benchmarks from the public AA model page (no API key)."""
     url = AA_PUBLIC_URL.format(slug=slug)
     with urlopen(url, timeout=60) as resp:
         html = resp.read().decode("utf-8", errors="ignore")
 
-    evaluations: dict[str, float] = {}
-    for key, pattern in _SCRAPE_PATTERNS.items():
-        m = pattern.search(html)
-        if m:
-            evaluations[key] = float(m.group(1))
+    evaluations = _scrape_evaluations(html)
 
     if not evaluations:
         raise ValueError(f"could not scrape benchmarks from {url}")

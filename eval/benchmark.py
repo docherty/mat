@@ -151,6 +151,9 @@ def compare_summaries(summaries: list[BenchmarkSummary]) -> dict:
 
 
 def main() -> None:
+    import warnings
+
+    warnings.filterwarnings("ignore", message="Could not import matplotlib.pyplot")
     parser = argparse.ArgumentParser(
         description="Honest live coding benchmark (HumanEval val — never train on this for fitness)"
     )
@@ -177,14 +180,15 @@ def main() -> None:
     if args.mode == "compare":
         summaries = []
         pool = load_connectors_dir(pool_dir)
-        for conn in pool:
+        baseline_ids = [args.connector] if args.connector else [c.id for c in pool]
+        for conn_id in baseline_ids:
             summaries.append(
                 run_benchmark(
                     pool_dir=pool_dir,
                     split=args.split,
                     mode="single",
                     limit=args.limit,
-                    connector_id=conn.id,
+                    connector_id=conn_id,
                 )
             )
             summaries.append(
@@ -193,7 +197,7 @@ def main() -> None:
                     split=args.split,
                     mode="single_reflect",
                     limit=args.limit,
-                    connector_id=conn.id,
+                    connector_id=conn_id,
                 )
             )
         summaries.append(

@@ -53,7 +53,7 @@ Modes:
 | `single` | One connector, one pass |
 | `single_reflect` | Single connector + verifier loop |
 | `orchestrated` | Think → work → verify routing |
-| `compare` | All of the above side by side |
+| `compare` | Baselines + orchestrated; pass `--connector` to compare one model only |
 
 See [eval-protocol.md](eval-protocol.md) for train/val splits and the +8pp success gate.
 
@@ -106,7 +106,9 @@ Quality tiers: `fast`, `balanced`, `max`.
 | `MAT_CHECKPOINT` | `~/.config/mat/coordinator/latest.json` if present | Trained routing weights |
 | `MAT_COORDINATOR` | auto | `prompted` or `trained` |
 | `MAT_GATEWAY_KEY` | `local-dev-key` | Bearer token for `/v1/*` |
-| `MAT_HOST` / `MAT_PORT` | `127.0.0.1` / `8080` | Bind address |
+| `MAT_LMSTUDIO_MODEL` | auto from `/v1/models` | Force model id for all local connectors |
+| `MAT_LLM_TIMEOUT` | `300` | Seconds per LLM request |
+| `MAT_HOST` / `MAT_PORT` | `127.0.0.1` / `8080` | Bind address for `mat-serve` |
 
 ## 5. Calibrate a connector (optional)
 
@@ -122,7 +124,7 @@ mat-calibrate --connector <id> --limit 10
 |-------|-----|
 | `no connectors` | Run `mat-discover-lmstudio` or set `MAT_POOL_DIR` |
 | Connection refused on :1234 | Start LM Studio server; load a model |
-| All models show same AA scores | Run `mat-sync-aa` or re-run discover after AA scrape fix |
+| All models show same AA scores | Re-run `mat-discover-lmstudio` after upgrading mat |
 | `mlx_lm.server: command not found` | Use `python -m mlx_lm server` |
 | Slow compare mode | One LM Studio instance = one loaded model; run modes sequentially |
 
