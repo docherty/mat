@@ -231,3 +231,4 @@ traces/*.jsonl
 # Installed connectors (real pool) — use ~/.config/mat/connectors/ by default
 connectors/installed/*.yaml
 !connectors/installed/README.md
+traces/*.json
