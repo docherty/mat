@@ -53,11 +53,10 @@ def test_benchmark_with_checkpoint(tmp_path: Path, tiny_pool, monkeypatch):
     save_checkpoint(TrainedCoordinator(np.zeros(9)), ckpt)
 
     monkeypatch.setattr(bench_mod, "load_tasks", lambda *a, **k: tasks)
-    monkeypatch.setattr(
-        bench_mod,
-        "load_connectors_dir",
-        lambda _d: tiny_pool,
-    )
+    def fake_resolve_pool(*_a, **_k):
+        return type("R", (), {"pool": tiny_pool, "source": "test"})()
+
+    monkeypatch.setattr(bench_mod, "resolve_pool", fake_resolve_pool)
 
     def fake_loop(pool, coordinator=None, worker=None, config=None):
         return LiveCodingLoop(pool, coordinator=coordinator, worker=worker or MockLLMWorker())

@@ -10,8 +10,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from connectors.dotenv import load_env
-from connectors.loader import load_connectors_dir
 from connectors.paths import default_pool_dir
+from connectors.pool_resolver import resolve_pool
 from loop.runner import OrchestrationLoop, live_enabled
 
 QUALITY_TIERS = ("fast", "balanced", "max")
@@ -52,16 +52,25 @@ def _check_auth(authorization: str | None) -> None:
 def create_app(connectors_dir: str | None = None) -> FastAPI:
     load_env()
     app = FastAPI(title="mat", version="0.1.0")
-    pool_dir = connectors_dir or os.environ.get("MAT_POOL_DIR") or str(default_pool_dir())
-    app.state.pool_dir = pool_dir
+    # Backwards compat: callers may still pass a pool directory directly (connectors_dir).
+    # Default behavior is now: if active manifest exists, use it; else fall back to legacy pool dir.
+    explicit_pool_dir = connectors_dir if connectors_dir else None
 
     def _load_pool() -> list:
         try:
-            pool = load_connectors_dir(pool_dir)
+            res = resolve_pool(pool_dir=explicit_pool_dir)
+            pool = res.pool
         except (OSError, ValueError) as exc:
             app.state.pool_error = str(exc)
             return []
         app.state.pool_error = None
+        app.state.pool_source = res.source
+        app.state.pool_dir = (
+            str(explicit_pool_dir)
+            if explicit_pool_dir
+            else str(res.library_dir or os.environ.get("MAT_POOL_DIR") or default_pool_dir())
+        )
+        app.state.active_manifest = str(res.active_manifest) if res.active_manifest else None
         return pool
 
     pool = _load_pool()
@@ -79,7 +88,9 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
             "status": "ok",
             "live": live_enabled(),
             "pool_size": len(pool),
-            "pool_dir": str(pool_dir),
+            "pool_dir": str(getattr(app.state, "pool_dir", "")),
+            "pool_source": getattr(app.state, "pool_source", None),
+            "active_manifest": getattr(app.state, "active_manifest", None),
             "pool_error": app.state.pool_error,
         }
 
@@ -104,7 +115,8 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
         if not pool:
             raise HTTPException(
                 status_code=503,
-                detail=f"no connectors in {pool_dir}; run mat-discover-lmstudio",
+                detail=f"no connectors (pool_source={getattr(app.state,'pool_source',None)}); "
+                f"check active.yaml or MAT_POOL_DIR ({getattr(app.state,'pool_dir',None)})",
             )
         tier = _map_model(body.model)
         messages = [m.model_dump() for m in body.messages]

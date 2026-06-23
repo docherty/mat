@@ -5,16 +5,23 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from connectors.discover_lmstudio import DEFAULT_LMSTUDIO_URL, sync_pool_lmstudio_names
+from connectors.discover_lmstudio import DEFAULT_LMSTUDIO_URL
 from connectors.dotenv import load_env
 from connectors.lmstudio_api import (
     clear_served_model_cache,
     fetch_served_model_ids,
     is_lmstudio_url,
+    match_served_model_id,
 )
-from connectors.loader import load_connector
-from connectors.paths import default_pool_dir, is_example_connector
-from connectors.pool_curated import apply_curated_pool
+from connectors.loader import dump_connector, load_connector
+from connectors.paths import default_pool_dir
+from connectors.pool_resolver import (
+    default_active_manifest,
+    default_library_dir,
+    index_library,
+    load_active_ids,
+    resolve_pool,
+)
 from connectors.provider_pricing import sync_pricing_for_endpoint
 
 
@@ -32,13 +39,41 @@ def cmd_rehash(pool_dir: Path) -> int:
     return 0
 
 
-def cmd_sync_pricing(pool_dir: Path) -> int:
-    """Populate/refresh pricing for API connectors (Venice/OpenRouter)."""
-    from connectors.loader import dump_connector
+def _paths_from_resolution(
+    *,
+    pool_dir: Path | None,
+    library_dir: Path | None,
+    active_manifest: Path | None,
+    all_connectors: bool,
+) -> list[Path]:
+    # Legacy pool dir override: operate on that directory directly.
+    if pool_dir is not None:
+        return sorted(Path(pool_dir).glob("*.yaml"))
 
+    res = resolve_pool(connectors_dir=library_dir, active_manifest=active_manifest)
+    if res.active_manifest and res.library_dir and res.library_index:
+        if all_connectors:
+            return sorted(index_library(res.library_dir).values())
+        paths: list[Path] = []
+        for c in res.pool:
+            p = res.library_index.get(c.id)
+            if p:
+                paths.append(p)
+        return paths
+
+    # Fall back to legacy default pool semantics (installed dir).
+    legacy = default_pool_dir()
+    return sorted(Path(legacy).glob("*.yaml"))
+
+
+def cmd_sync_pricing(
+    *,
+    paths: list[Path],
+) -> int:
+    """Populate/refresh pricing for API connectors (Venice/OpenRouter)."""
     # group by (base_url, auth_env) so we fetch each provider listing once
     groups: dict[tuple[str, str], list[Path]] = {}
-    for path in sorted(pool_dir.glob("*.yaml")):
+    for path in sorted(paths):
         c = load_connector(path)
         if c.locality != "api":
             continue
@@ -74,12 +109,11 @@ def cmd_sync_pricing(pool_dir: Path) -> int:
     return 0
 
 
-def cmd_list(pool_dir: Path) -> int:
-    if not pool_dir.exists() or not any(pool_dir.glob("*.yaml")):
-        print(f"no connectors in {pool_dir}")
-        print("run: mat-discover-lmstudio  OR  mat-import-aa <slug> --local")
+def cmd_list(*, paths: list[Path]) -> int:
+    if not paths:
+        print("no connectors")
         return 1
-    for path in sorted(pool_dir.glob("*.yaml")):
+    for path in sorted(paths):
         c = load_connector(path)
         method = c.profile.profile_method
         coding = c.capabilities["coding"].score
@@ -94,14 +128,10 @@ def cmd_list(pool_dir: Path) -> int:
     return 0
 
 
-def cmd_verify(pool_dir: Path) -> int:
+def cmd_verify(*, paths: list[Path]) -> int:
     errors = 0
     lmstudio_urls: set[str] = set()
-    for path in sorted(pool_dir.glob("*.yaml")):
-        if is_example_connector(path):
-            print(f"WARN  {path.name}: lives under examples — not for production pool")
-            errors += 1
-            continue
+    for path in sorted(paths):
         c = load_connector(path)
         if c.profile.profile_method == "hand":
             print(f"WARN  {c.id}: hand-scored — import AA benchmarks before routing")
@@ -124,7 +154,7 @@ def cmd_verify(pool_dir: Path) -> int:
             print(f"ERR   LM Studio at {base} returned no chat models")
             errors += 1
             continue
-        for path in sorted(pool_dir.glob("*.yaml")):
+        for path in sorted(paths):
             c = load_connector(path)
             if c.endpoint.base_url.rstrip("/") != base:
                 continue
@@ -142,9 +172,35 @@ def cmd_verify(pool_dir: Path) -> int:
     return errors
 
 
-def cmd_sync_lmstudio(pool_dir: Path, *, base_url: str) -> int:
+def cmd_sync_lmstudio(*, paths: list[Path], base_url: str) -> int:
     try:
-        changes = sync_pool_lmstudio_names(pool_dir, base_url=base_url)
+        if not is_lmstudio_url(base_url):
+            raise ValueError(f"not an LM Studio base URL: {base_url}")
+        clear_served_model_cache()
+        served = fetch_served_model_ids(base_url)
+        if not served:
+            raise RuntimeError(f"LM Studio at {base_url} returned no chat models")
+
+        changes: list[tuple[str, str, str]] = []
+        for path in sorted(paths):
+            connector = load_connector(path)
+            if not is_lmstudio_url(connector.endpoint.base_url):
+                continue
+            catalog = connector.profile.catalog_id or ""
+            folder = catalog.split("/")[-1] if catalog else path.stem
+            matched = match_served_model_id(
+                folder,
+                catalog,
+                served,
+                guess=connector.endpoint.model_name,
+            )
+            if not matched:
+                continue
+            if matched != connector.endpoint.model_name:
+                old = connector.endpoint.model_name
+                connector.endpoint.model_name = matched
+                dump_connector(connector, path)
+                changes.append((connector.id, old, matched))
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"sync failed: {exc}")
         return 1
@@ -176,18 +232,11 @@ def cmd_apply(pool_dir: Path, curated_path: Path) -> int:
     if not curated_path.exists():
         print(f"curated file not found: {curated_path}")
         return 1
-    pool_dir.mkdir(parents=True, exist_ok=True)
-    kept, removed, missing = apply_curated_pool(pool_dir, curated_path)
-    for cid in removed:
-        print(f"removed {cid}")
-    for cid in kept:
-        print(f"kept    {cid}")
-    if missing:
-        print("missing (run mat-discover-lmstudio --curated … then apply again):")
-        for cid in missing:
-            print(f"  {cid}")
-        return 1
-    print(f"pool has {len(kept)} connector(s)")
+    # New behavior: write the active manifest instead of deleting connectors.
+    ids = load_active_ids(curated_path)
+    pool_dir.parent.mkdir(parents=True, exist_ok=True)
+    pool_dir.write_text("connectors:\n" + "".join(f"  - {cid}\n" for cid in ids))
+    print(f"wrote active manifest: {pool_dir} ({len(ids)} connector(s))")
     return 0
 
 
@@ -216,6 +265,15 @@ def main() -> None:
     parser.add_argument("--pool", type=Path, default=None)
     parser.add_argument("--base-url", default=DEFAULT_LMSTUDIO_URL)
     parser.add_argument(
+        "--all", action="store_true", help="operate on all connectors in the library"
+    )
+    parser.add_argument(
+        "--library", type=Path, default=None, help="connector library dir (default: repo)"
+    )
+    parser.add_argument(
+        "--active", type=Path, default=None, help="active manifest path (default: repo)"
+    )
+    parser.add_argument(
         "--curated",
         type=Path,
         help="curated pool yaml (for apply); default: connectors/curated/local-dev-pool.yaml",
@@ -227,29 +285,38 @@ def main() -> None:
         help="connector id to keep when applying curated pool (repeatable)",
     )
     args = parser.parse_args()
-    pool = args.pool or default_pool_dir()
+    library_dir = args.library or default_library_dir()
+    active_manifest = args.active or default_active_manifest()
+
+    paths = _paths_from_resolution(
+        pool_dir=args.pool,
+        library_dir=library_dir,
+        active_manifest=active_manifest,
+        all_connectors=bool(args.all),
+    )
     if args.command == "list":
-        raise SystemExit(cmd_list(pool))
+        raise SystemExit(cmd_list(paths=paths))
     if args.command == "verify":
-        raise SystemExit(cmd_verify(pool))
+        raise SystemExit(cmd_verify(paths=paths))
     if args.command == "sync-lmstudio":
-        raise SystemExit(cmd_sync_lmstudio(pool, base_url=args.base_url))
+        raise SystemExit(cmd_sync_lmstudio(paths=paths, base_url=args.base_url))
     if args.command == "apply":
         curated = _parse_curated_arg(parser, args)
-        # If you want to keep an extra connector (e.g. Venice) while applying a curated local pool,
-        # append it to a temporary curated list.
-        if args.keep:
-            from connectors.pool_curated import load_curated_ids
-
-            ids = load_curated_ids(curated) + list(args.keep)
-            tmp = curated.parent / f".{curated.stem}.tmp.yaml"
-            tmp.write_text("connectors:\n" + "".join(f"  - {cid}\n" for cid in ids))
-            curated = tmp
-        raise SystemExit(cmd_apply(pool, curated))
+        ids = load_active_ids(curated) + list(args.keep)
+        tmp = curated.parent / f".{curated.stem}.tmp.yaml"
+        tmp.write_text("connectors:\n" + "".join(f"  - {cid}\n" for cid in ids))
+        raise SystemExit(cmd_apply(active_manifest, tmp))
     if args.command == "rehash":
-        raise SystemExit(cmd_rehash(pool))
+        # Rehash selected connector files in place.
+        rewritten = 0
+        for p in paths:
+            c = load_connector(p, check_hash=False)
+            dump_connector(c, p)
+            rewritten += 1
+        print(f"rehash OK ({rewritten} connector(s))")
+        raise SystemExit(0)
     if args.command == "sync-pricing":
-        raise SystemExit(cmd_sync_pricing(pool))
+        raise SystemExit(cmd_sync_pricing(paths=paths))
     raise SystemExit(cmd_lmstudio_models(args.base_url))
 
 

@@ -13,8 +13,7 @@ import cma  # noqa: E402
 import numpy as np  # noqa: E402
 
 from connectors.dotenv import load_env  # noqa: E402
-from connectors.loader import load_connectors_dir  # noqa: E402
-from connectors.paths import default_pool_dir  # noqa: E402
+from connectors.pool_resolver import resolve_pool  # noqa: E402
 from coordinator.checkpoint import save_checkpoint  # noqa: E402
 from coordinator.policy import TrainedCoordinator  # noqa: E402
 from coordinator.train import _heuristic_weights  # noqa: E402
@@ -24,7 +23,7 @@ from workers.mock import MockLLMWorker  # noqa: E402
 
 
 def train_live(
-    pool_dir: str | Path,
+    pool_dir: str | Path | None,
     *,
     task_limit: int = 10,
     generations: int = 8,
@@ -32,7 +31,7 @@ def train_live(
     seed: int = 42,
     mock: bool = False,
 ) -> dict:
-    pool = load_connectors_dir(pool_dir)
+    pool = resolve_pool(pool_dir=pool_dir).pool if pool_dir is not None else resolve_pool().pool
     train_path = Path(__file__).parent / "tasks" / "humaneval_train.json"
     if not train_path.exists():
         raise FileNotFoundError("run: python -m eval.datasets.build_humaneval_split")
@@ -90,7 +89,7 @@ def main() -> None:
     args = parser.parse_args()
     out_path = args.checkpoint or args.out
     result = train_live(
-        args.pool or default_pool_dir(),
+        args.pool,
         task_limit=args.tasks,
         generations=args.generations,
         population=args.population,

@@ -14,8 +14,8 @@ from connectors.efficiency import (
     speed_tier_from_efficiency,
     token_efficiency_score,
 )
-from connectors.loader import dump_connector, load_connector, load_connectors_dir
-from connectors.paths import default_pool_dir
+from connectors.loader import dump_connector, load_connector
+from connectors.pool_resolver import find_active_connector_path, resolve_pool
 from connectors.schema import BenchmarkAttestation, CapabilityDim, Connector
 from eval.live_loop import LiveCodingLoop
 from eval.oracle import load_tasks
@@ -106,10 +106,10 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    pool_dir = args.pool or default_pool_dir()
-    connector = next((c for c in load_connectors_dir(pool_dir) if c.id == args.connector), None)
+    res = resolve_pool(pool_dir=args.pool) if args.pool is not None else resolve_pool()
+    connector = next((c for c in res.pool if c.id == args.connector), None)
     if connector is None:
-        raise SystemExit(f"connector not found in {pool_dir}: {args.connector}")
+        raise SystemExit(f"connector not found in active pool: {args.connector}")
 
     tasks_path = (
         Path(__file__).resolve().parents[1] / "eval" / "tasks" / f"humaneval_{args.split}.json"
@@ -133,12 +133,21 @@ def main() -> None:
     print(json.dumps(report, indent=2))
     if not args.dry_run:
         out: Path | None = None
-        for p in pool_dir.glob("*.yaml"):
-            if load_connector(p).id == updated.id:
-                out = p
-                break
+        if res.active_manifest and res.library_dir and res.library_index:
+            out = find_active_connector_path(res, updated.id)
+        if out is None and args.pool is not None:
+            pool_dir = Path(args.pool)
+            for p in pool_dir.glob("*.yaml"):
+                if load_connector(p).id == updated.id:
+                    out = p
+                    break
+            if out is None:
+                out = pool_dir / f"{updated.id.split('@')[0]}.yaml"
         if out is None:
-            out = pool_dir / f"{updated.id.split('@')[0]}.yaml"
+            raise SystemExit(
+                "cannot determine output path for calibrated connector; "
+                "set --pool or use active.yaml with a library dir"
+            )
         dump_connector(updated, out)
         print(f"wrote {out}")
 

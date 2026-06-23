@@ -27,8 +27,13 @@ mat never guesses capability scores. Connectors are built from **Artificial Anal
 export ARTIFICIAL_ANALYSIS_API_KEY=...
 mat-sync-aa
 
-# Curated local pool (3 models — recommended for routing dev)
+# Onboard local models from your LM Studio downloads into the legacy install dir (~/.config/mat/connectors)
 mat-discover-lmstudio --curated connectors/curated/local-dev-pool.yaml
+
+# Migrate onboarded connectors into the repo library + write repo-root active.yaml
+mat-migrate-pool
+
+# Choose your active pool (writes ./active.yaml; does not delete connectors)
 mat-pool apply --curated connectors/curated/local-dev-pool.yaml \
   --keep deepseek-v4-flash@venice \
   --keep xiaomi-mimo-v2-5@venice
@@ -36,7 +41,8 @@ mat-pool list
 mat-pool verify
 ```
 
-Installed YAML files land in **`~/.config/mat/connectors/`**. The repo's `connectors/examples/` directory is boilerplate only.
+By default, `mat` uses **`./active.yaml`** (if present) to select from the repo’s connector library in **`connectors/library/`**.
+The legacy install dir **`~/.config/mat/connectors/`** remains supported for backwards compatibility.
 
 If you have API connectors (Venice/OpenRouter), sync pricing into the installed YAMLs:
 
@@ -44,7 +50,7 @@ If you have API connectors (Venice/OpenRouter), sync pricing into the installed 
 mat-pool sync-pricing
 ```
 
-Override the pool path:
+Legacy override (bypasses `active.yaml`):
 
 ```bash
 export MAT_POOL_DIR=/path/to/connectors

@@ -49,6 +49,7 @@ mat-import-aa = "connectors.cli_import_aa:main"
 mat-discover-lmstudio = "connectors.discover_lmstudio:main"
 mat-calibrate = "connectors.calibrate:main"
 mat-pool = "connectors.cli_pool:main"
+mat-migrate-pool = "connectors.cli_migrate_pool:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -33,8 +33,9 @@ mat-sync-aa
 
 # Install connectors from ~/.cache/lm-studio/models (uses AA scrape per model if needed)
 mat-discover-lmstudio   # requires LM Studio up; maps exact /v1/models ids
-mat-pool sync-lmstudio  # align connector model_name to LM Studio /v1/models
-mat-pool verify         # fails if a connector model is not served
+mat-migrate-pool        # copy onboarded connectors into connectors/library + write active.yaml
+mat-pool sync-lmstudio  # align connector model_name to LM Studio /v1/models (active pool by default)
+mat-pool verify         # fails if a connector model is not served (active pool by default)
 
 # Optional: add Venice models (API; put VENICE_API_KEY in .env)
 mat-import-aa deepseek-v4-flash --base-url https://api.venice.ai/api/v1 --model-name deepseek-v4-flash --auth-env VENICE_API_KEY --connector-id deepseek-v4-flash@venice

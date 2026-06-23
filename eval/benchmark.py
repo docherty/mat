@@ -7,8 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from connectors.dotenv import load_env
-from connectors.loader import load_connectors_dir
-from connectors.paths import default_pool_dir
+from connectors.pool_resolver import resolve_pool
 from coordinator.checkpoint import load_checkpoint
 from eval.live_loop import LiveCodingLoop, LiveLoopConfig, RoleCoordinator
 from eval.oracle import Task, load_tasks
@@ -44,7 +43,7 @@ class BenchmarkSummary:
 
 def run_benchmark(
     *,
-    pool_dir: str | Path,
+    pool_dir: str | Path | None,
     split: str,
     mode: str,
     limit: int | None = None,
@@ -52,9 +51,10 @@ def run_benchmark(
     reflect: bool = False,
     checkpoint: Path | None = None,
 ) -> BenchmarkSummary:
-    pool = load_connectors_dir(pool_dir)
+    res = resolve_pool(pool_dir=pool_dir) if pool_dir is not None else resolve_pool()
+    pool = res.pool
     if not pool:
-        raise ValueError(f"no connectors in {pool_dir}")
+        raise ValueError(f"no connectors (pool_source={res.source})")
 
     tasks_path = Path(__file__).parent / "tasks" / f"humaneval_{split}.json"
     if not tasks_path.exists():
@@ -164,7 +164,7 @@ def main() -> None:
     parser.add_argument(
         "--pool",
         default=None,
-        help="connector directory (default: ~/.config/mat/connectors)",
+        help="legacy connector directory override (bypasses active.yaml selection)",
     )
     parser.add_argument("--split", choices=("train", "val"), default="val")
     parser.add_argument(
@@ -178,12 +178,12 @@ def main() -> None:
     parser.add_argument("--out", type=Path, help="write JSON report")
     args = parser.parse_args()
 
-    pool_dir = args.pool or default_pool_dir()
+    pool_dir = args.pool
     ckpt = args.checkpoint
 
     if args.mode == "compare":
         summaries = []
-        pool = load_connectors_dir(pool_dir)
+        pool = resolve_pool(pool_dir=pool_dir).pool if pool_dir is not None else resolve_pool().pool
         baseline_ids = [args.connector] if args.connector else [c.id for c in pool]
         for conn_id in baseline_ids:
             summaries.append(

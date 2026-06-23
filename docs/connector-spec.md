@@ -196,7 +196,9 @@ Phase A simulation fixtures remain in `connectors/examples/alpha-*.yaml`.
 | Directory | Role |
 |-----------|------|
 | `connectors/examples/` | Boilerplate and reference imports — **not** the runtime pool |
-| `~/.config/mat/connectors/` | Default **installed** pool (`MAT_POOL_DIR` to override) |
+| `connectors/library/` | Shareable connector library (YAMLs with benchmarks, pricing, modalities) |
+| `active.yaml` (repo root) | Active pool selection (IDs only) |
+| `~/.config/mat/connectors/` | Legacy installed pool (`MAT_POOL_DIR` to override / bypass `active.yaml`) |
 
 Installed connectors must use `profile_method: benchmark_import` or `mat_probe`, with cited
 `benchmarks[]` from Artificial Analysis (or `mat_calibration` after `mat-calibrate`).
