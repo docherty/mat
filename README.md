@@ -23,6 +23,10 @@ See **[docs/getting-started.md](docs/getting-started.md)** for the full walkthro
 ```bash
 pip install -e ".[dev]"   # use: python3.11 -m pip install -e ".[dev]" if pip is Python 3.9
 
+# Optional: keep env vars tidy
+cp .env.example .env
+# edit .env (gitignored)
+
 # Optional: full AA catalog (free API key)
 export ARTIFICIAL_ANALYSIS_API_KEY=...
 mat-sync-aa

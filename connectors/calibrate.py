@@ -8,6 +8,7 @@ import statistics
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+from connectors.dotenv import load_env
 from connectors.efficiency import (
     DEFAULT_REFERENCE_OUTPUT_TOKENS,
     speed_tier_from_efficiency,
@@ -87,6 +88,7 @@ def calibrate_connector(
 
 
 def main() -> None:
+    load_env()
     parser = argparse.ArgumentParser(
         description="Calibrate installed connector coding score from live worker eval (train split)"
     )

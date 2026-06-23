@@ -9,6 +9,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from connectors.dotenv import load_env
 from connectors.loader import load_connectors_dir
 from connectors.paths import default_pool_dir
 from loop.runner import OrchestrationLoop, live_enabled
@@ -48,6 +49,7 @@ def _check_auth(authorization: str | None) -> None:
 
 
 def create_app(connectors_dir: str | None = None) -> FastAPI:
+    load_env()
     app = FastAPI(title="mat", version="0.1.0")
     pool_dir = connectors_dir or os.environ.get("MAT_POOL_DIR") or str(default_pool_dir())
     try:
@@ -186,6 +188,7 @@ def json_dumps(obj: dict) -> str:
 def main() -> None:
     import uvicorn
 
+    load_env()
     host = os.environ.get("MAT_HOST", "127.0.0.1")
     port = int(os.environ.get("MAT_PORT", "8080"))
     uvicorn.run(create_app(), host=host, port=port)

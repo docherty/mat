@@ -12,6 +12,10 @@ This guide walks through a **local LM Studio** setup on macOS. The same commands
 git clone <repo>
 cd mat
 python3.11 -m pip install -e ".[dev]"   # requires Python ≥3.11 (not system 3.9 pip)
+
+# Keep env vars tidy (recommended)
+cp .env.example .env
+# edit .env (gitignored)
 ```
 
 ## 1. Install your model pool
@@ -140,6 +144,7 @@ mat-calibrate --connector <id> --limit 10
 | Connection refused on :1234 | Start LM Studio server; load a model |
 | All models show same AA scores | Re-run `mat-discover-lmstudio` after upgrading mat |
 | `mlx_lm.server: command not found` | Use `python -m mlx_lm server` |
+| Env vars not taking effect | Ensure you edited `.env`; mat auto-loads it on startup |
 | Model not served / 400 from LM Studio | Load that model; `mat-pool verify`; `mat-pool sync-lmstudio` |
 | Slow compare mode | Use `--connector` on compare; load all pool models in LM Studio first |
 

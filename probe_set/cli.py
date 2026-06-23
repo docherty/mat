@@ -6,6 +6,7 @@ import argparse
 from datetime import UTC, datetime
 from pathlib import Path
 
+from connectors.dotenv import load_env
 from connectors.loader import dump_connector
 from connectors.schema import (
     CURRENT_PROBE_SUITE,
@@ -67,6 +68,7 @@ def build_connector(
 
 
 def main() -> None:
+    load_env()
     parser = argparse.ArgumentParser(description="Profile a model and write a connector file")
     parser.add_argument("--endpoint", default="openai")
     parser.add_argument("--base-url", required=True)

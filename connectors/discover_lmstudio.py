@@ -6,6 +6,7 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 
+from connectors.dotenv import load_env
 from connectors.import_aa import connector_from_aa, find_aa_model_or_fetch, load_aa_cache, slugify
 from connectors.lmstudio_api import (
     clear_served_model_cache,
@@ -245,6 +246,7 @@ def install_from_cache(
 def main() -> None:
     import argparse
 
+    load_env()
     parser = argparse.ArgumentParser(
         description="Install connectors from LM Studio cache + AA benchmarks"
     )

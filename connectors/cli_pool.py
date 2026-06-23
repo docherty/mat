@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from connectors.discover_lmstudio import DEFAULT_LMSTUDIO_URL, sync_pool_lmstudio_names
+from connectors.dotenv import load_env
 from connectors.lmstudio_api import (
     clear_served_model_cache,
     fetch_served_model_ids,
@@ -134,6 +135,7 @@ def cmd_apply(pool_dir: Path, curated_path: Path) -> int:
 
 
 def main() -> None:
+    load_env()
     parser = argparse.ArgumentParser(description="List or verify installed connector pool")
     parser.add_argument(
         "command",

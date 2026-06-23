@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from connectors.dotenv import load_env
 from connectors.import_aa import (
     connector_from_aa,
     fetch_model_by_slug,
@@ -17,6 +18,7 @@ from connectors.schema import Endpoint
 
 
 def main() -> None:
+    load_env()
     parser = argparse.ArgumentParser(
         description="Import connector from Artificial Analysis benchmarks"
     )

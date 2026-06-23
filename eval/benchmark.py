@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
+from connectors.dotenv import load_env
 from connectors.loader import load_connectors_dir
 from connectors.paths import default_pool_dir
 from coordinator.checkpoint import load_checkpoint
@@ -154,6 +155,7 @@ def main() -> None:
     import warnings
 
     warnings.filterwarnings("ignore", message="Could not import matplotlib.pyplot")
+    load_env()
     parser = argparse.ArgumentParser(
         description="Honest live coding benchmark (HumanEval val — never train on this for fitness)"
     )
