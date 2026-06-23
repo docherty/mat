@@ -30,6 +30,7 @@ class LiveLoopConfig:
     max_turns: int = 5
     revision_cap: int = 2
     use_thinker: bool = True
+    skip_oracle: bool = False
 
 
 @dataclass
@@ -174,6 +175,21 @@ class LiveCodingLoop:
             )
             record(turn, worker_conn)
             stages_log.append("work")
+
+            if self.config.skip_oracle or not (task.tests or "").strip():
+                return LiveLoopResult(
+                    task_id=task.id,
+                    passed=True,
+                    code=draft_code,
+                    turns=turns,
+                    steps=len(turns),
+                    revisions=revisions,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    estimated_cost_usd=cost,
+                    connector_ids=connector_ids,
+                    stages=stages_log + ["synthesize"],
+                )
 
             script = build_oracle_script(task, draft_code)
             oracle = run_oracle(script, "")

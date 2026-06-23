@@ -155,11 +155,12 @@ def find_aa_model_or_fetch(query: str, models: list[dict] | None = None) -> dict
     hit = find_aa_model(query, candidates) if candidates else None
     if hit:
         return hit
-    slug = slugify(query)
-    try:
-        return fetch_aa_public(slug)
-    except (OSError, ValueError):
-        return None
+    for slug in (query, slugify(query)):
+        try:
+            return fetch_aa_public(slug)
+        except (OSError, ValueError):
+            continue
+    return None
 
 
 def connector_from_aa(

@@ -2,6 +2,8 @@
 
 **Production pool path:** `~/.config/mat/connectors/` (default for `mat-benchmark`, `mat-serve`, `mat-train-live`).
 
+Full setup: [docs/getting-started.md](../docs/getting-started.md).
+
 YAML files here are gitignored. Use this directory only if you set `MAT_POOL_DIR=connectors/installed`.
 
 ## Install from your LM Studio cache

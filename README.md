@@ -18,6 +18,8 @@ You run it. You hold the downstream API keys. We host nothing.
 
 ## Quick start (local, LM Studio)
 
+See **[docs/getting-started.md](docs/getting-started.md)** for the full walkthrough.
+
 ```bash
 pip install -e ".[dev]"
 
@@ -31,6 +33,10 @@ mat-pool list
 
 # Smoke benchmark (needs LM Studio server on :1234)
 mat-benchmark --split val --limit 2 --mode single --connector <id-from-mat-pool-list>
+
+# OpenAI-compatible gateway (MAT_LIVE=1 by default)
+export MAT_GATEWAY_KEY=local-dev-key
+mat-serve
 ```
 
 Installed connectors live in **`~/.config/mat/connectors/`** — not `connectors/examples/`.
@@ -57,6 +63,7 @@ See [docs/eval-protocol.md](docs/eval-protocol.md) for honest benchmarking rules
 mat-discover-lmstudio
 
 # 2. Train coordinator on train split (local LLMs, $0 API)
+mat-train-live --mock --tasks 3 --generations 2   # dry run, no API
 mat-train-live --tasks 5 --generations 8 --checkpoint ~/.config/mat/coordinator/latest.json
 
 # 3. Evaluate on held-out val (never used in training)
@@ -95,12 +102,12 @@ pip install -e ".[slm]"   # torch + transformers; best on M4 / 4090
 | `eval/` | Live loop, benchmark, HumanEval splits |
 | `workers/` | OpenAI-compatible LLM client |
 | `coordinator/` | Routing policy, checkpoint, SLM (optional) |
-| `docs/` | [Connector spec](docs/connector-spec.md), [eval protocol](docs/eval-protocol.md) |
+| `docs/` | [Getting started](docs/getting-started.md), [connector spec](docs/connector-spec.md), [eval protocol](docs/eval-protocol.md) |
 
 ## Status
 
-Alpha. Phase A simulation passed. Live eval pipeline implemented; **live lift gate pending**
-on your hardware with installed pool.
+Alpha. Phase A simulation passed. Live eval pipeline and **`mat-serve` live path** implemented;
+**live lift gate pending** on your hardware with installed pool.
 
 ## License
 

@@ -45,6 +45,23 @@ def test_scan_lmstudio_cache_finds_models():
     assert any("Qwen3.6-35B" in e["folder_name"] for e in found)
 
 
+def test_find_aa_model_or_fetch_tries_hint_slug(monkeypatch):
+    from connectors.import_aa import find_aa_model_or_fetch
+
+    calls: list[str] = []
+
+    def fake_fetch(slug: str):
+        calls.append(slug)
+        if slug == "qwen3-6-35b-a3b":
+            return {"slug": slug, "evaluations": {}}
+        raise ValueError("not found")
+
+    monkeypatch.setattr("connectors.import_aa.fetch_aa_public", fake_fetch)
+    hit = find_aa_model_or_fetch("qwen3-6-35b-a3b", models=[])
+    assert hit is not None
+    assert calls[0] == "qwen3-6-35b-a3b"
+
+
 def test_example_vs_installed_paths():
     assert is_example_connector(EXAMPLES_DIR / "alpha-coder.yaml")
     pool = default_pool_dir()

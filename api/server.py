@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from connectors.loader import load_connectors_dir
 from connectors.paths import default_pool_dir
-from loop.runner import OrchestrationLoop
+from loop.runner import OrchestrationLoop, live_enabled
 
 QUALITY_TIERS = ("fast", "balanced", "max")
 
@@ -48,12 +48,29 @@ def _check_auth(authorization: str | None) -> None:
 
 
 def create_app(connectors_dir: str | None = None) -> FastAPI:
-    import os
-
     app = FastAPI(title="mat", version="0.1.0")
     pool_dir = connectors_dir or os.environ.get("MAT_POOL_DIR") or str(default_pool_dir())
-    pool = load_connectors_dir(pool_dir)
-    loop = OrchestrationLoop(pool)
+    try:
+        pool = load_connectors_dir(pool_dir)
+    except (OSError, ValueError) as exc:
+        pool = []
+        app.state.pool_error = str(exc)
+    else:
+        app.state.pool_error = None
+    app.state.pool_dir = pool_dir
+
+    def _loop(tier: str) -> OrchestrationLoop:
+        return OrchestrationLoop.from_env(pool, quality_tier=tier)
+
+    @app.get("/health")
+    def health() -> dict:
+        return {
+            "status": "ok",
+            "live": live_enabled(),
+            "pool_size": len(pool),
+            "pool_dir": str(pool_dir),
+            "pool_error": app.state.pool_error,
+        }
 
     @app.get("/v1/models")
     def list_models() -> dict:
@@ -70,8 +87,14 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
         idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     ):
         _check_auth(authorization)
+        if not pool:
+            raise HTTPException(
+                status_code=503,
+                detail=f"no connectors in {pool_dir}; run mat-discover-lmstudio",
+            )
         tier = _map_model(body.model)
         messages = [m.model_dump() for m in body.messages]
+        loop = _loop(tier)
 
         if body.stream:
             return StreamingResponse(
@@ -80,12 +103,12 @@ def create_app(connectors_dir: str | None = None) -> FastAPI:
             )
 
         result = loop.run(messages)
-        return _completion_payload(result.answer, tier, result.steps)
+        return _completion_payload(result, tier)
 
     return app
 
 
-def _completion_payload(content: str, tier: str, steps: int) -> dict:
+def _completion_payload(result, tier: str) -> dict:
     return {
         "id": f"chatcmpl-{uuid.uuid4().hex[:12]}",
         "object": "chat.completion",
@@ -94,15 +117,20 @@ def _completion_payload(content: str, tier: str, steps: int) -> dict:
         "choices": [
             {
                 "index": 0,
-                "message": {"role": "assistant", "content": content},
+                "message": {"role": "assistant", "content": result.answer},
                 "finish_reason": "stop",
             }
         ],
         "usage": {
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "total_tokens": 0,
-            "x_breakdown": {"stages": steps, "local_token_pct": 0.0},
+            "prompt_tokens": result.input_tokens,
+            "completion_tokens": result.output_tokens,
+            "total_tokens": result.input_tokens + result.output_tokens,
+            "x_mat": {
+                "stages": result.steps,
+                "connector_id": result.connector_id,
+                "passed": result.passed,
+                "cost_usd": result.estimated_cost_usd,
+            },
         },
     }
 
@@ -115,7 +143,7 @@ def _stream_response(loop: OrchestrationLoop, messages: list[dict], tier: str, s
         else [
             "Assessing task difficulty…",
             "Selecting specialists from pool…",
-            "Verifying output…",
+            "Synthesizing response…",
         ]
     )
     for line in narrations:

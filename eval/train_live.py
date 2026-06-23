@@ -16,6 +16,7 @@ from coordinator.policy import TrainedCoordinator
 from coordinator.train import _heuristic_weights
 from eval.live_loop import LiveCodingLoop, RoleCoordinator
 from eval.oracle import load_tasks
+from workers.mock import MockLLMWorker
 
 
 def train_live(
@@ -25,17 +26,19 @@ def train_live(
     generations: int = 8,
     population: int = 8,
     seed: int = 42,
+    mock: bool = False,
 ) -> dict:
     pool = load_connectors_dir(pool_dir)
     train_path = Path(__file__).parent / "tasks" / "humaneval_train.json"
     if not train_path.exists():
         raise FileNotFoundError("run: python -m eval.datasets.build_humaneval_split")
     tasks = load_tasks(train_path, split="train")[:task_limit]
+    worker = MockLLMWorker() if mock else None
 
     def fitness(flat: list[float]) -> float:
         coord = TrainedCoordinator(np.array(flat))
         role_coord = RoleCoordinator(coord)
-        scored_loop = LiveCodingLoop(pool, role_coord)
+        scored_loop = LiveCodingLoop(pool, role_coord, worker=worker)
         passed = 0
         cost = 0.0
         for task in tasks:
@@ -54,7 +57,7 @@ def train_live(
     es.optimize(fitness, iterations=generations)
     best = TrainedCoordinator(np.array(es.result.xbest))
 
-    eval_loop = LiveCodingLoop(pool, RoleCoordinator(best))
+    eval_loop = LiveCodingLoop(pool, RoleCoordinator(best), worker=worker)
     passed = sum(1 for t in tasks if eval_loop.run_orchestrated(t).passed)
     return {
         "train_pass_at_1": passed / len(tasks),
@@ -74,6 +77,7 @@ def main() -> None:
     parser.add_argument("--generations", type=int, default=8)
     parser.add_argument("--population", type=int, default=8)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--mock", action="store_true", help="use MockLLMWorker (no API calls)")
     parser.add_argument("--out", type=Path, help="write coordinator checkpoint JSON")
     parser.add_argument("--checkpoint", type=Path, help="alias for --out")
     args = parser.parse_args()
@@ -84,6 +88,7 @@ def main() -> None:
         generations=args.generations,
         population=args.population,
         seed=args.seed,
+        mock=args.mock,
     )
     serializable = {k: v for k, v in result.items() if k != "coordinator"}
     print(json.dumps(serializable, indent=2))
