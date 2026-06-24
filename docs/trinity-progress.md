@@ -4,7 +4,7 @@ Plan: [trinity-alignment.md](./trinity-alignment.md) · Paper: [arXiv:2512.04695
 
 **Goal:** val pass@1 lift ≥ **+8pp** over `max(single, single_reflect)` with fair 5-turn budget.
 
-**Last updated:** 2026-06-23 — val compare complete (`traces/val_compare_trained.json`)
+**Last updated:** 2026-06-24 — SLM training stopped (gen 3 plateau)
 
 ---
 
@@ -24,19 +24,16 @@ Plan: [trinity-alignment.md](./trinity-alignment.md) · Paper: [arXiv:2512.04695
 
 ---
 
-| 10 | SLM coordinator train + val compare | **running** | `traces/train_live_slm.log` |
+| 10 | SLM coordinator train (Qwen3-0.6B head, 20 tasks) | **stopped** | gens 1–3 flat at **0.6952** (~70% train); ~16h for 3 gens |
+| 11 | SLM val compare | skipped | killed before checkpoint useful |
+
+Checkpoint (partial): `~/.config/mat/coordinator/latest_slm.json` — do not use for val; training plateaued.
 
 ---
 
-## Active run (overnight)
+## Active run
 
-```bash
-tail -f traces/train_live_slm.log
-# or full pipeline:
-tail -f traces/overnight_slm.log
-```
-
-Checkpoint: `~/.config/mat/coordinator/latest_slm.json`
+None.
 
 ```bash
 # Union ceiling only (fastest diagnostic)
@@ -75,5 +72,14 @@ python3.11 scripts/merge_union.py traces/val_qwen_single.json traces/val_deepsee
 | Run | per_question_best | best single | orchestrated | delta | gap_to_union |
 |-----|-------------------|-------------|--------------|-------|--------------|
 | Trained compare (val 23, DeepSeek baseline) | 95.7%* | **87.0%** (single) | **87.0%** | **0.0pp** | **8.7pp** |
+| 3-connector union (val 23) | — | **87.0%** best single | **91.3%** union | +4.3pp vs single | — |
+| SLM train (20 tasks, gen 3) | — | — | **~70%** train pass@1 | — | plateau |
 
 \*Compare `per_question_best` uses single+reflect baselines for this connector only (95.7%), not the 3-connector union (91.3%).
+
+## Lessons (2026-06-24)
+
+1. **Pool has real headroom** — union 91.3% vs best single 87% (+4.3pp). Routing *should* help.
+2. **Neither coordinator learned to capture it** — linear 0pp val lift; SLM stuck at ~70% train after 24 evals.
+3. **Live CMA-ES is expensive** — ~5h/gen at `parallel=2`; need fast probes before long runs.
+4. **Next bets** — joint (model×role) actions, replicates, singular-value SLM tuning, or pool swap before more head training.
